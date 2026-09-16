@@ -26,3 +26,8 @@ models:
     marts:
       +materialized: table
       +tags: ["marts", "offline_ready"]
+
+tests:
+  ecommerce_lakehouse:
+    +tags: ["quality_gate", "test"]
+

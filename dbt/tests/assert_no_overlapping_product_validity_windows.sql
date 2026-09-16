@@ -1,3 +1,4 @@
+{{ config(tags = ['quality_gate', 'test']) }}
 -- Singular test: Assert that no two versions of the same product have overlapping [valid_from, valid_to) validity windows
 with versions as (
 

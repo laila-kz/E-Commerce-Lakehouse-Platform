@@ -1075,12 +1075,12 @@
               <span class="layer-chip chip-source active" onclick="toggleLayerFilter('source', this)">Source</span>
               <span class="layer-chip chip-landing active" onclick="toggleLayerFilter('landing', this)">Landing</span>
               <span class="layer-chip chip-bronze active" onclick="toggleLayerFilter('bronze', this)">Bronze</span>
-              <span class="layer-chip chip-quality active" onclick="toggleLayerFilter('quality', this)">Quality Gates</span>
               <span class="layer-chip chip-silver active" onclick="toggleLayerFilter('silver', this)">Silver</span>
               <span class="layer-chip chip-gold active" onclick="toggleLayerFilter('gold', this)">Gold</span>
               <span class="layer-chip chip-marts active" onclick="toggleLayerFilter('marts', this)">Marts</span>
               <span class="layer-chip chip-bi active" onclick="toggleLayerFilter('bi', this)">BI</span>
-              <span class="layer-chip chip-orchestration active" onclick="toggleLayerFilter('orchestration', this)">Orchestration</span>
+              <span class="layer-chip chip-quality" onclick="toggleLayerFilter('quality', this)">Quality Gates</span>
+              <span class="layer-chip chip-orchestration" onclick="toggleLayerFilter('orchestration', this)">Orchestration</span>
             </div>
           </div>
         </div>
@@ -1709,8 +1709,9 @@
     const canvas = document.getElementById('dag-canvas');
     const ctx = canvas ? canvas.getContext('2d') : null;
 
-    let layerOrder = ["source", "landing", "orchestration", "bronze", "quality", "silver", "gold", "marts", "bi"];
-    let activeLayerFilters = new Set(layerOrder);
+    const defaultVisibleLayers = ["source", "landing", "bronze", "silver", "gold", "marts", "bi"];
+    let layerOrder = ["source", "landing", "bronze", "silver", "gold", "marts", "bi", "quality", "orchestration"];
+    let activeLayerFilters = new Set(defaultVisibleLayers);
     let camera = { x: 50, y: 50, zoom: 0.88 };
     let isDragging = false;
     let dragStart = { x: 0, y: 0 };
@@ -2009,6 +2010,11 @@
     function layoutGraph(data) {
       if (!data || !data.nodes) return { nodes: [], links: [] };
 
+      // Exclude raw dbt test assertions from primary graph layout to reduce clutter
+      const filteredNodes = data.nodes.filter(n => n.resource_type !== 'test' && !(n.id && n.id.startsWith('test.')));
+      const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
+      const filteredLinks = (data.links || []).filter(l => filteredNodeIds.has(l.source) && filteredNodeIds.has(l.target));
+
       const colX = {
         source: 60,
         landing: 270,
@@ -2024,13 +2030,9 @@
       const layerCounts = {};
       layerOrder.forEach(l => layerCounts[l] = 0);
 
-      data.nodes.forEach(n => {
+      filteredNodes.forEach(n => {
         if (n.name && (n.name.startsWith('mart_') || n.name.includes('mart_'))) {
           n.layer = 'marts';
-        }
-        if (n.resource_type === 'test' || (n.id && n.id.startsWith('test.'))) {
-          n.layer = 'quality';
-          n.format = n.format || 'Test Assertion';
         }
 
         const l = n.layer || "gold";
@@ -2039,25 +2041,17 @@
 
         n.width = 180;
         n.height = 54;
-
-        if (l === 'quality' && data.nodes.length > 25) {
-          const subCol = Math.floor(count / 10);
-          const subRow = count % 10;
-          n.x = colX.quality + subCol * 190;
-          n.y = 80 + subRow * 76;
-        } else {
-          n.x = (colX[l] !== undefined ? colX[l] : 1160);
-          n.y = 80 + count * 76;
-        }
+        n.x = (colX[l] !== undefined ? colX[l] : 1160);
+        n.y = 80 + count * 76;
       });
 
-      const airNodes = data.nodes.filter(n => n.layer === 'orchestration');
+      const airNodes = filteredNodes.filter(n => n.layer === 'orchestration');
       airNodes.forEach((n, idx) => {
         n.x = colX.orchestration;
         n.y = 230 + idx * 78;
       });
 
-      return data;
+      return { nodes: filteredNodes, links: filteredLinks };
     }
 
     // Initialize graphData with default graph right away
@@ -2074,8 +2068,11 @@
     }
 
     function resetDefaultGraphState() {
-      activeLayerFilters = new Set(layerOrder);
-      document.querySelectorAll('.layer-chip').forEach(c => c.classList.add('active'));
+      activeLayerFilters = new Set(defaultVisibleLayers);
+      document.querySelectorAll('.layer-chip').forEach(c => {
+        const isCore = defaultVisibleLayers.some(l => c.classList.contains('chip-' + l));
+        c.classList.toggle('active', isCore);
+      });
 
       const searchInput = document.getElementById('lineage-search');
       if (searchInput) searchInput.value = '';

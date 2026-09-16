@@ -1,3 +1,4 @@
+{{ config(tags = ['quality_gate', 'test']) }}
 -- Singular test: Verify retention rate at month 0 is exactly 1.0 (100%) for all cohorts
 select
     cohort_month,

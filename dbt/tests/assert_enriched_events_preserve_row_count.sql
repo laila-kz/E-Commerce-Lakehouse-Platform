@@ -1,3 +1,4 @@
+{{ config(tags = ['quality_gate', 'test']) }}
 -- Singular test: Assert that int_events_enriched preserves the exact row count of stg_events
 with stg_count as (
 

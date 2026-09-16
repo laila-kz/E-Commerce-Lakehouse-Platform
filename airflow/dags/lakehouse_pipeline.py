@@ -1,7 +1,7 @@
 """
 Airflow Orchestration DAG for E-Commerce Data Lakehouse Pipeline
-Runs: Ingestion -> Bronze Transform -> Bronze Quality Gate -> Silver Transform
-      -> Silver Quality Gate -> dbt (Staging -> Core Dims/Facts -> Marts) -> dbt Tests
+Runs: Ingestion -> Bronze Stage (Transform + Gate) -> Silver Stage (Transform + Gate)
+      -> dbt Warehouse Stage (Staging -> Core -> Marts) -> dbt Test Gate
 """
 
 import sys
@@ -9,13 +9,13 @@ from datetime import datetime, timedelta
 
 from airflow import DAG
 from airflow.operators.bash import BashOperator
+from airflow.utils.task_group import TaskGroup
 
 # Import custom failure callback plugin
 sys.path.append('/opt/airflow/plugins')
 try:
     from slack_alert import slack_alert_on_failure
 except ImportError:
-    # Fallback placeholder if plugin path differs locally
     def slack_alert_on_failure(context):
         pass
 
@@ -34,15 +34,6 @@ default_args = {
     'on_failure_callback': slack_alert_on_failure,
 }
 
-dag = DAG(
-    'ecommerce_lakehouse',
-    default_args=default_args,
-    description='End-to-End E-Commerce Data Lakehouse ETL & Quality Pipeline',
-    schedule_interval='@daily',
-    catchup=False,
-    max_active_runs=1,
-)
-
 SPARK_SUBMIT_PREFIX = (
     "docker exec spark /opt/spark/bin/spark-submit "
     "--driver-memory 2g --executor-memory 2g "
@@ -50,105 +41,92 @@ SPARK_SUBMIT_PREFIX = (
     "--conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
 )
 
-# Quality gate runner is plain Python (not a Spark job) — use python3 directly
 PYTHON_EXEC_PREFIX = "docker exec spark python3"
 
-# 1. Ingestion Layer
-ingest_raw = BashOperator(
-    task_id='ingest_raw',
-    bash_command=f'python {PROJECT_DIR}/ingestion/kaggle_ingest.py --data-dir {PROJECT_DIR}/data/demo_sample --force',
-    cwd=PROJECT_DIR,
-    execution_timeout=timedelta(minutes=10),
-    dag=dag,
-)
+with DAG(
+    'ecommerce_lakehouse',
+    default_args=default_args,
+    description='End-to-End E-Commerce Data Lakehouse ETL & Quality Pipeline',
+    schedule_interval='@daily',
+    catchup=False,
+    max_active_runs=1,
+) as dag:
 
-# 2. Bronze Transform
-bronze_transform = BashOperator(
-    task_id='bronze_transform',
-    bash_command=f'{SPARK_SUBMIT_PREFIX} /workspace/spark_jobs/bronze_transform.py',
-    cwd=PROJECT_DIR,
-    execution_timeout=timedelta(minutes=25),
-    dag=dag,
-)
+    # 1. Ingestion Stage
+    ingest_raw = BashOperator(
+        task_id='ingest_raw',
+        bash_command=f'python {PROJECT_DIR}/ingestion/kaggle_ingest.py --data-dir {PROJECT_DIR}/data/demo_sample --force',
+        cwd=PROJECT_DIR,
+        execution_timeout=timedelta(minutes=10),
+    )
 
-# 3. Bronze Quality Gate (MUST PASS)
-bronze_quality_gate = BashOperator(
-    task_id='bronze_quality_gate',
-    bash_command=f'{PYTHON_EXEC_PREFIX} /workspace/checks/run_quality_gate.py --layer bronze',
-    cwd=PROJECT_DIR,
-    execution_timeout=timedelta(minutes=15),
-    dag=dag,
-)
+    # 2. Bronze Stage & Quality Gate Group
+    with TaskGroup(group_id='bronze_stage', tooltip='Bronze transformation and Soda quality gate') as bronze_stage:
+        bronze_transform = BashOperator(
+            task_id='bronze_transform',
+            bash_command=f'{SPARK_SUBMIT_PREFIX} /workspace/spark_jobs/bronze_transform.py',
+            cwd=PROJECT_DIR,
+            execution_timeout=timedelta(minutes=25),
+        )
+        bronze_quality_gate = BashOperator(
+            task_id='bronze_quality_gate',
+            bash_command=f'{PYTHON_EXEC_PREFIX} /workspace/checks/run_quality_gate.py --layer bronze',
+            cwd=PROJECT_DIR,
+            execution_timeout=timedelta(minutes=15),
+        )
+        bronze_transform >> bronze_quality_gate
 
-# 4. Silver Transform (Incremental with watermark & SHA-256 deduplication)
-silver_transform = BashOperator(
-    task_id='silver_transform',
-    bash_command=f'{SPARK_SUBMIT_PREFIX} /workspace/spark_jobs/silver_transform.py --batch-id {{{{ run_id }}}}',
-    cwd=PROJECT_DIR,
-    execution_timeout=timedelta(minutes=25),
-    dag=dag,
-)
+    # 3. Silver Stage & Quality Gate Group
+    with TaskGroup(group_id='silver_stage', tooltip='Silver MERGE deduplication and Soda quality gate') as silver_stage:
+        silver_transform = BashOperator(
+            task_id='silver_transform',
+            bash_command=f'{SPARK_SUBMIT_PREFIX} /workspace/spark_jobs/silver_transform.py --batch-id {{{{ run_id }}}}',
+            cwd=PROJECT_DIR,
+            execution_timeout=timedelta(minutes=25),
+        )
+        silver_quality_gate = BashOperator(
+            task_id='silver_quality_gate',
+            bash_command=f'{PYTHON_EXEC_PREFIX} /workspace/checks/run_quality_gate.py --layer silver',
+            cwd=PROJECT_DIR,
+            execution_timeout=timedelta(minutes=15),
+        )
+        silver_transform >> silver_quality_gate
 
-# 5. Silver Quality Gate (MUST PASS)
-silver_quality_gate = BashOperator(
-    task_id='silver_quality_gate',
-    bash_command=f'{PYTHON_EXEC_PREFIX} /workspace/checks/run_quality_gate.py --layer silver',
-    cwd=PROJECT_DIR,
-    execution_timeout=timedelta(minutes=15),
-    dag=dag,
-)
+    # 4. dbt Gold Warehouse & Marts Modeling Stage
+    with TaskGroup(group_id='dbt_warehouse_stage', tooltip='Dimensional modeling and analytical marts') as dbt_warehouse_stage:
+        dbt_run_staging = BashOperator(
+            task_id='dbt_run_staging',
+            bash_command='dbt run --select staging --profiles-dir .',
+            cwd=DBT_DIR,
+            execution_timeout=timedelta(minutes=15),
+        )
+        dbt_run_intermediate = BashOperator(
+            task_id='dbt_run_intermediate',
+            bash_command='dbt run --select intermediate --profiles-dir .',
+            cwd=DBT_DIR,
+            execution_timeout=timedelta(minutes=15),
+        )
+        dbt_run_dims_facts = BashOperator(
+            task_id='dbt_run_dims_facts',
+            bash_command='dbt run --select core --profiles-dir .',
+            cwd=DBT_DIR,
+            execution_timeout=timedelta(minutes=15),
+        )
+        dbt_run_marts = BashOperator(
+            task_id='dbt_run_marts',
+            bash_command='dbt run --select marts --profiles-dir .',
+            cwd=DBT_DIR,
+            execution_timeout=timedelta(minutes=15),
+        )
+        dbt_run_staging >> dbt_run_intermediate >> dbt_run_dims_facts >> dbt_run_marts
 
-# 6. dbt Layer Tasks
-dbt_run_staging = BashOperator(
-    task_id='dbt_run_staging',
-    bash_command='dbt run --select staging --profiles-dir .',
-    cwd=DBT_DIR,
-    execution_timeout=timedelta(minutes=15),
-    dag=dag,
-)
+    # 5. Unified dbt Test Invariant Validation Gate
+    dbt_test_gate = BashOperator(
+        task_id='dbt_test_gate',
+        bash_command='dbt test --profiles-dir .',
+        cwd=DBT_DIR,
+        execution_timeout=timedelta(minutes=10),
+    )
 
-dbt_run_intermediate = BashOperator(
-    task_id='dbt_run_intermediate',
-    bash_command='dbt run --select intermediate --profiles-dir .',
-    cwd=DBT_DIR,
-    execution_timeout=timedelta(minutes=15),
-    dag=dag,
-)
-
-dbt_run_dims_facts = BashOperator(
-    task_id='dbt_run_dims_facts',
-    bash_command='dbt run --select core --profiles-dir .',
-    cwd=DBT_DIR,
-    execution_timeout=timedelta(minutes=15),
-    dag=dag,
-)
-
-dbt_run_marts = BashOperator(
-    task_id='dbt_run_marts',
-    bash_command='dbt run --select marts --profiles-dir .',
-    cwd=DBT_DIR,
-    execution_timeout=timedelta(minutes=15),
-    dag=dag,
-)
-
-dbt_test_full = BashOperator(
-    task_id='dbt_test_full',
-    bash_command='dbt test --profiles-dir .',
-    cwd=DBT_DIR,
-    execution_timeout=timedelta(minutes=10),
-    dag=dag,
-)
-
-# Pipeline Task Dependencies
-(
-    ingest_raw
-    >> bronze_transform
-    >> bronze_quality_gate
-    >> silver_transform
-    >> silver_quality_gate
-    >> dbt_run_staging
-    >> dbt_run_intermediate
-    >> dbt_run_dims_facts
-    >> dbt_run_marts
-    >> dbt_test_full
-)
+    # Clean Pipeline Orchestration Flow
+    ingest_raw >> bronze_stage >> silver_stage >> dbt_warehouse_stage >> dbt_test_gate

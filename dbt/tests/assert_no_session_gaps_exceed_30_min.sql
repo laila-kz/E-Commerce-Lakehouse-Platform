@@ -1,3 +1,4 @@
+{{ config(tags = ['quality_gate', 'test']) }}
 -- Singular test: Assert that no event-to-event gap within the same session exceeds 30 minutes (1800 seconds)
 -- We use LAG partitioned by session_id (not user_id) to only check intra-session gaps
 with session_events as (

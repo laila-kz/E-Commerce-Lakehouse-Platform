@@ -1,3 +1,4 @@
+{{ config(tags = ['quality_gate', 'test']) }}
 -- Singular test: Verify retained_count never exceeds original cohort_size
 select
     cohort_month,
