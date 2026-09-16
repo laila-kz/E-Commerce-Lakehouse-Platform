@@ -1,9 +1,9 @@
 {
   "meta": {
-    "generated_at": "2026-09-16T14:34:46.562249Z",
+    "generated_at": "2026-09-16T15:04:38.810143Z",
     "source": "dbt manifest.json + static infrastructure",
-    "node_count": 109,
-    "link_count": 127,
+    "node_count": 110,
+    "link_count": 129,
     "layer_counts": {
       "source": 1,
       "landing": 1,
@@ -11,7 +11,7 @@
       "bronze": 1,
       "quality": 2,
       "silver": 2,
-      "gold": 96,
+      "gold": 97,
       "bi": 3
     },
     "project": "E-Commerce Data Lakehouse"
@@ -223,6 +223,15 @@
       "color": "#ffd700",
       "val": 7,
       "tooltip": "<b>assert_mart_category_performance_unique_grain</b><br/>Type: Test<br/>Layer: GOLD<br/>Schema: main_dbt_test__audit<br/>"
+    },
+    {
+      "id": "test.ecommerce_lakehouse.assert_purchases_to_mart_revenue_parity",
+      "name": "assert_purchases_to_mart_revenue_parity",
+      "resource_type": "test",
+      "layer": "gold",
+      "color": "#ffd700",
+      "val": 7,
+      "tooltip": "<b>assert_purchases_to_mart_revenue_parity</b><br/>Type: Test<br/>Layer: GOLD<br/>Schema: main_dbt_test__audit<br/>"
     },
     {
       "id": "test.ecommerce_lakehouse.assert_fact_purchases_preserve_row_count",
@@ -1232,6 +1241,20 @@
       "particle_color": "#ffd700"
     },
     {
+      "source": "model.ecommerce_lakehouse.fact_purchases",
+      "target": "test.ecommerce_lakehouse.assert_purchases_to_mart_revenue_parity",
+      "particle_speed": 0.004,
+      "particle_width": 2,
+      "particle_color": "#ffd700"
+    },
+    {
+      "source": "model.ecommerce_lakehouse.mart_daily_summary",
+      "target": "test.ecommerce_lakehouse.assert_purchases_to_mart_revenue_parity",
+      "particle_speed": 0.004,
+      "particle_width": 2,
+      "particle_color": "#ffd700"
+    },
+    {
       "source": "model.ecommerce_lakehouse.int_events_enriched",
       "target": "test.ecommerce_lakehouse.assert_fact_purchases_preserve_row_count",
       "particle_speed": 0.004,
@@ -1288,7 +1311,7 @@
       "particle_color": "#ffd700"
     },
     {
-      "source": "model.ecommerce_lakehouse.int_sessions",
+      "source": "model.ecommerce_lakehouse.fact_events",
       "target": "test.ecommerce_lakehouse.assert_no_session_gaps_exceed_30_min",
       "particle_speed": 0.004,
       "particle_width": 2,

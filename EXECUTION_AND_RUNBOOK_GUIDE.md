@@ -170,6 +170,10 @@ dbt test --profiles-dir .
 cd ..
 ```
 > **Output:** `83 of 83 tests PASSED` (Sessionization bounds, cohort retention invariants, SCD2 ranges).
+> 
+> *Note on Infrastructure Requirements:*
+> - When running `dbt test` against local materialized DuckDB tables (`dev.duckdb`), 55 dimension and mart invariant tests run directly with zero latency.
+> - When running staging tests (`stg_events`, `assert_fact_events_preserve_row_count`) that invoke `delta_scan('s3://...')`, ensure the MinIO container is running (`docker compose up -d minio`) or execute dbt within the containerized environment.
 
 ---
 
