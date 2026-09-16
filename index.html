@@ -1828,13 +1828,11 @@
 
     // ── TAB 1: INTERACTIVE LINEAGE GRAPH ENGINE ────────────────────────────────
     const canvas = document.getElementById('dag-canvas');
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas ? canvas.getContext('2d') : null;
 
-    let graphData = { nodes: [], links: [] };
     let layerOrder = ["source", "landing", "orchestration", "bronze", "quality", "silver", "gold", "marts", "bi"];
-
     let activeLayerFilters = new Set(layerOrder);
-    let camera = { x: 80, y: 120, zoom: 0.95 };
+    let camera = { x: 50, y: 50, zoom: 0.88 };
     let isDragging = false;
     let dragStart = { x: 0, y: 0 };
     let selectedNode = null;
@@ -1857,6 +1855,24 @@
       return colors[layer] || (isDark ? '#60a5fa' : '#3b82f6');
     }
 
+    function drawRoundedRect(c, x, y, width, height, radius) {
+      c.beginPath();
+      if (typeof c.roundRect === 'function') {
+        c.roundRect(x, y, width, height, radius);
+      } else {
+        c.moveTo(x + radius, y);
+        c.lineTo(x + width - radius, y);
+        c.quadraticCurveTo(x + width, y, x + width, y + radius);
+        c.lineTo(x + width, y + height - radius);
+        c.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        c.lineTo(x + radius, y + height);
+        c.quadraticCurveTo(x, y + height, x, y + height - radius);
+        c.lineTo(x, y + radius);
+        c.quadraticCurveTo(x, y, x + radius, y);
+        c.closePath();
+      }
+    }
+
     function buildDefaultGraph() {
       const nodes = [
         { id: "raw.events_csv", name: "events.csv", layer: "source", type: "Kaggle CSV (~4M rows)", format: "CSV", pk: "N/A" },
@@ -1869,15 +1885,15 @@
         { id: "silver.events", name: "silver.events", layer: "silver", type: "Delta Lake MERGE", format: "Delta", pk: "event_key (SHA-256)" },
         { id: "soda.silver_gate", name: "soda.silver_gate", layer: "quality", type: "Soda Core Gate", format: "YAML Rules", pk: "Deduplication" },
         { id: "silver.purchases", name: "silver.purchases", layer: "silver", type: "Delta Sub-Table", format: "Delta", pk: "purchase_id" },
-        { id: "dbt.dim_customer", name: "dim_customer", layer: "gold", type: "dbt Model", format: "DuckDB Table", pk: "customer_key" },
-        { id: "dbt.dim_date", name: "dim_date", layer: "gold", type: "dbt Model", format: "DuckDB Table", pk: "date_key" },
-        { id: "dbt.dim_product", name: "dim_product", layer: "gold", type: "dbt Model (SCD 2)", format: "DuckDB Table", pk: "product_key" },
+        { id: "dbt.dim_customer", name: "dim_customer", layer: "gold", type: "dbt Dimension Model", format: "DuckDB Table", pk: "customer_key" },
+        { id: "dbt.dim_date", name: "dim_date", layer: "gold", type: "dbt Dimension Model", format: "DuckDB Table", pk: "date_key" },
+        { id: "dbt.dim_product", name: "dim_product", layer: "gold", type: "dbt Dimension (SCD 2)", format: "DuckDB Table", pk: "product_key" },
         { id: "dbt.fact_events", name: "fact_events", layer: "gold", type: "dbt Fact Table", format: "DuckDB Table", pk: "event_key" },
         { id: "dbt.fact_purchases", name: "fact_purchases", layer: "gold", type: "dbt Fact Table", format: "DuckDB Table", pk: "purchase_key" },
         { id: "dbt.mart_daily", name: "mart_daily_summary", layer: "marts", type: "dbt Mart Table", format: "DuckDB Mart", pk: "date + cat_l1" },
         { id: "dbt.mart_retention", name: "mart_customer_retention", layer: "marts", type: "dbt Mart Table", format: "DuckDB Mart", pk: "cohort_month" },
         { id: "dbt.mart_category", name: "mart_category_perf", layer: "marts", type: "dbt Mart Table", format: "DuckDB Mart", pk: "category_l1" },
-        { id: "bi.dashboards", name: "Metabase Dashboards", layer: "bi", type: "Executive Analytics", format: "Dashboards", pk: "3 Boards" }
+        { id: "bi.dashboards", name: "Metabase Dashboards", layer: "bi", type: "Executive Analytics", format: "Dashboards", pk: "3 Dashboards" }
       ];
 
       const links = [
@@ -1912,14 +1928,16 @@
     }
 
     function layoutGraph(data) {
+      if (!data || !data.nodes) return { nodes: [], links: [] };
+
       const colX = {
         source: 60,
-        landing: 260,
-        orchestration: 260,
-        bronze: 460,
-        quality: 680,
-        silver: 880,
-        gold: 1140,
+        landing: 270,
+        orchestration: 270,
+        bronze: 480,
+        quality: 700,
+        silver: 920,
+        gold: 1160,
         marts: 1420,
         bi: 1680
       };
@@ -1928,25 +1946,42 @@
       layerOrder.forEach(l => layerCounts[l] = 0);
 
       data.nodes.forEach(n => {
+        if (n.name && (n.name.startsWith('mart_') || n.name.includes('mart_'))) {
+          n.layer = 'marts';
+        }
+        if (n.resource_type === 'test' || (n.id && n.id.startsWith('test.'))) {
+          n.layer = 'quality';
+          n.format = n.format || 'Test Assertion';
+        }
+
         const l = n.layer || "gold";
         const count = layerCounts[l] || 0;
         layerCounts[l] = count + 1;
 
-        n.width = 175;
+        n.width = 180;
         n.height = 54;
-        n.x = (colX[l] !== undefined ? colX[l] : 1000);
-        n.y = 80 + count * 82;
+        n.x = (colX[l] !== undefined ? colX[l] : 1160);
+        n.y = 70 + count * 78;
       });
 
-      const airNode = data.nodes.find(n => n.id === "airflow.ingest_task");
-      if (airNode) airNode.y = 260;
+      const airNodes = data.nodes.filter(n => n.layer === 'orchestration');
+      airNodes.forEach((n, idx) => {
+        n.x = colX.orchestration;
+        n.y = 230 + idx * 78;
+      });
 
       return data;
     }
 
+    // Initialize graphData with default graph right away
+    let graphData = layoutGraph(buildDefaultGraph());
+
     function initGraph() {
       fetch('graph_data.json')
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.json();
+        })
         .then(json => {
           if (json.nodes && json.nodes.length > 0) {
             graphData = layoutGraph(json);
@@ -1962,20 +1997,29 @@
     }
 
     function resizeCanvas() {
+      if (!canvas || !ctx) return;
       const container = document.getElementById('lineage-view');
-      canvas.width = container.clientWidth * window.devicePixelRatio;
-      canvas.height = container.clientHeight * window.devicePixelRatio;
-      ctx.setTransform(1, 0, 0, 1, 0, 0); // reset before re-scaling
-      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const w = rect.width || window.innerWidth;
+      const h = rect.height || (window.innerHeight - 90);
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
       renderGraph();
     }
     window.addEventListener('resize', resizeCanvas);
 
     function renderGraph() {
-      const w = canvas.width / window.devicePixelRatio;
-      const h = canvas.height / window.devicePixelRatio;
-      ctx.clearRect(0, 0, w, h);
+      if (!canvas || !ctx) return;
+      const dpr = window.devicePixelRatio || 1;
+      const w = canvas.width / dpr;
+      const h = canvas.height / dpr;
+      if (w <= 0 || h <= 0) return;
 
+      ctx.clearRect(0, 0, w, h);
       const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
 
       ctx.save();
@@ -1983,96 +2027,105 @@
       ctx.scale(camera.zoom, camera.zoom);
 
       const nodeMap = {};
-      graphData.nodes.forEach(n => nodeMap[n.id] = n);
+      if (graphData && graphData.nodes) {
+        graphData.nodes.forEach(n => { if (n && n.id) nodeMap[n.id] = n; });
+      }
 
       // Draw Edges
-      graphData.links.forEach(l => {
-        const src = nodeMap[l.source];
-        const tgt = nodeMap[l.target];
-        if (!src || !tgt) return;
-        if (!activeLayerFilters.has(src.layer) || !activeLayerFilters.has(tgt.layer)) return;
+      if (graphData && graphData.links) {
+        graphData.links.forEach(l => {
+          const src = nodeMap[l.source];
+          const tgt = nodeMap[l.target];
+          if (!src || !tgt) return;
+          if (!activeLayerFilters.has(src.layer) || !activeLayerFilters.has(tgt.layer)) return;
 
-        const isHighlighted = (selectedNode && (selectedNode.id === src.id || selectedNode.id === tgt.id));
-        const isCritical = criticalPathOnly && (src.layer === 'source' || src.layer === 'bronze' || src.layer === 'silver' || src.layer === 'gold' || src.layer === 'marts');
+          const isHighlighted = (selectedNode && (selectedNode.id === src.id || selectedNode.id === tgt.id));
+          const isCritical = criticalPathOnly && (src.layer === 'source' || src.layer === 'bronze' || src.layer === 'silver' || src.layer === 'gold' || src.layer === 'marts');
 
-        ctx.beginPath();
-        const startX = src.x + src.width;
-        const startY = src.y + src.height / 2;
-        const endX = tgt.x;
-        const endY = tgt.y + tgt.height / 2;
-        const cp1x = startX + (endX - startX) * 0.5;
-        const cp2x = startX + (endX - startX) * 0.5;
+          ctx.beginPath();
+          const startX = src.x + src.width;
+          const startY = src.y + src.height / 2;
+          const endX = tgt.x;
+          const endY = tgt.y + tgt.height / 2;
+          const cp1x = startX + (endX - startX) * 0.5;
+          const cp2x = startX + (endX - startX) * 0.5;
 
-        ctx.moveTo(startX, startY);
-        ctx.bezierCurveTo(cp1x, startY, cp2x, endY, endX, endY);
+          ctx.moveTo(startX, startY);
+          ctx.bezierCurveTo(cp1x, startY, cp2x, endY, endX, endY);
 
-        if (isHighlighted) {
-          ctx.strokeStyle = isDark ? '#60a5fa' : '#3b82f6';
-          ctx.lineWidth = 2.5;
-        } else if (isCritical) {
-          ctx.strokeStyle = isDark ? 'rgba(96,165,250,0.5)' : 'rgba(59,130,246,0.45)';
-          ctx.lineWidth = 1.8;
-        } else {
-          ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
-          ctx.lineWidth = 1.2;
-        }
-        ctx.stroke();
-      });
+          if (isHighlighted) {
+            ctx.strokeStyle = isDark ? '#60a5fa' : '#3b82f6';
+            ctx.lineWidth = 2.5;
+          } else if (isCritical) {
+            ctx.strokeStyle = isDark ? 'rgba(96,165,250,0.5)' : 'rgba(59,130,246,0.45)';
+            ctx.lineWidth = 1.8;
+          } else {
+            ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)';
+            ctx.lineWidth = 1.2;
+          }
+          ctx.stroke();
+        });
+      }
 
       // Draw Nodes
-      graphData.nodes.forEach(n => {
-        if (!activeLayerFilters.has(n.layer)) return;
+      if (graphData && graphData.nodes) {
+        graphData.nodes.forEach(n => {
+          if (!n || !activeLayerFilters.has(n.layer)) return;
 
-        const isSelected = selectedNode && selectedNode.id === n.id;
-        const isHovered = hoveredNode && hoveredNode.id === n.id;
-        const color = getLayerColor(n.layer);
+          const isSelected = selectedNode && selectedNode.id === n.id;
+          const isHovered = hoveredNode && hoveredNode.id === n.id;
+          const color = getLayerColor(n.layer);
 
-        // Card Body
-        ctx.beginPath();
-        ctx.roundRect(n.x, n.y, n.width, n.height, 8);
-        if (isDark) {
-          ctx.fillStyle = isSelected ? '#1e3a5f' : (isHovered ? '#253347' : '#1e293b');
-          ctx.strokeStyle = isSelected ? '#60a5fa' : (isHovered ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.1)');
-        } else {
-          ctx.fillStyle = isSelected ? '#eff6ff' : (isHovered ? '#f8fafc' : '#ffffff');
-          ctx.strokeStyle = isSelected ? '#3b82f6' : (isHovered ? '#94a3b8' : '#e2e8f0');
-        }
-        ctx.fill();
-        ctx.lineWidth = isSelected ? 2 : 1;
-        ctx.stroke();
+          // Card Body
+          drawRoundedRect(ctx, n.x, n.y, n.width, n.height, 8);
+          if (isDark) {
+            ctx.fillStyle = isSelected ? '#1e3a5f' : (isHovered ? '#263348' : '#1e293b');
+            ctx.strokeStyle = isSelected ? '#60a5fa' : (isHovered ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.12)');
+          } else {
+            ctx.fillStyle = isSelected ? '#eff6ff' : (isHovered ? '#f8fafc' : '#ffffff');
+            ctx.strokeStyle = isSelected ? '#3b82f6' : (isHovered ? '#94a3b8' : '#e2e8f0');
+          }
+          ctx.fill();
+          ctx.lineWidth = isSelected ? 2 : 1;
+          ctx.stroke();
 
-        // Layer Color Indicator Line
-        ctx.fillStyle = color;
-        ctx.fillRect(n.x, n.y + 4, 3.5, n.height - 8);
+          // Layer Color Indicator Left Bar
+          ctx.fillStyle = color;
+          ctx.fillRect(n.x, n.y + 4, 3.5, n.height - 8);
 
-        // Layer Label — title-case, Inter (not monospace)
-        ctx.font = '500 9px Inter';
-        ctx.fillStyle = color;
-        const layerLabel = (n.layer || 'node').charAt(0).toUpperCase() + (n.layer || 'node').slice(1);
-        ctx.fillText(layerLabel, n.x + 12, n.y + 16);
+          // Layer Label — Title Case, Inter
+          ctx.font = '600 9px Inter, sans-serif';
+          ctx.fillStyle = color;
+          const rawLayer = n.layer || 'node';
+          const layerLabel = rawLayer.charAt(0).toUpperCase() + rawLayer.slice(1);
+          ctx.fillText(layerLabel, n.x + 12, n.y + 16);
 
-        // Node Title
-        ctx.font = '600 11.5px Inter';
-        ctx.fillStyle = isDark ? '#f1f5f9' : '#0f172a';
-        const displayTitle = n.name.length > 20 ? n.name.slice(0, 18) + '..' : n.name;
-        ctx.fillText(displayTitle, n.x + 12, n.y + 32);
+          // Node Title
+          ctx.font = '600 11.5px Inter, sans-serif';
+          ctx.fillStyle = isDark ? '#f1f5f9' : '#0f172a';
+          const nameStr = n.name || n.id || 'Node';
+          const displayTitle = nameStr.length > 21 ? nameStr.slice(0, 19) + '..' : nameStr;
+          ctx.fillText(displayTitle, n.x + 12, n.y + 32);
 
-        // Format / Type Badge
-        ctx.font = '400 9px Inter';
-        ctx.fillStyle = isDark ? '#64748b' : '#94a3b8';
-        ctx.fillText(n.format || 'Table', n.x + 12, n.y + 46);
-      });
+          // Format / Type Badge
+          ctx.font = '400 9px Inter, sans-serif';
+          ctx.fillStyle = isDark ? '#94a3b8' : '#64748b';
+          const formatStr = n.format || n.resource_type || 'Table';
+          ctx.fillText(formatStr, n.x + 12, n.y + 46);
+        });
+      }
 
       ctx.restore();
     }
 
     function getNodeAt(x, y) {
+      if (!graphData || !graphData.nodes) return null;
       const graphX = (x - camera.x) / camera.zoom;
       const graphY = (y - camera.y) / camera.zoom;
 
       for (let i = graphData.nodes.length - 1; i >= 0; i--) {
         const n = graphData.nodes[i];
-        if (!activeLayerFilters.has(n.layer)) continue;
+        if (!n || !activeLayerFilters.has(n.layer)) continue;
         if (graphX >= n.x && graphX <= n.x + n.width && graphY >= n.y && graphY <= n.y + n.height) {
           return n;
         }
@@ -2080,51 +2133,54 @@
       return null;
     }
 
-    canvas.addEventListener('mousedown', (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const clickY = e.clientY - rect.top;
-      const node = getNodeAt(clickX, clickY);
-
-      if (node) {
-        selectedNode = node;
-        openDrawer(node);
-        renderGraph();
-      } else {
-        isDragging = true;
-        dragStart = { x: e.clientX - camera.x, y: e.clientY - camera.y };
-      }
-    });
-
-    window.addEventListener('mousemove', (e) => {
-      if (isDragging) {
-        camera.x = e.clientX - dragStart.x;
-        camera.y = e.clientY - dragStart.y;
-        renderGraph();
-      } else {
+    if (canvas) {
+      canvas.addEventListener('mousedown', (e) => {
         const rect = canvas.getBoundingClientRect();
-        const hovered = getNodeAt(e.clientX - rect.left, e.clientY - rect.top);
-        if (hovered !== hoveredNode) {
-          hoveredNode = hovered;
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+        const node = getNodeAt(clickX, clickY);
+
+        if (node) {
+          selectedNode = node;
+          openDrawer(node);
           renderGraph();
+        } else {
+          isDragging = true;
+          dragStart = { x: e.clientX - camera.x, y: e.clientY - camera.y };
         }
-      }
-    });
+      });
 
-    window.addEventListener('mouseup', () => { isDragging = false; });
+      window.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+          camera.x = e.clientX - dragStart.x;
+          camera.y = e.clientY - dragStart.y;
+          renderGraph();
+        } else if (canvas) {
+          const rect = canvas.getBoundingClientRect();
+          const hovered = getNodeAt(e.clientX - rect.left, e.clientY - rect.top);
+          if (hovered !== hoveredNode) {
+            hoveredNode = hovered;
+            renderGraph();
+          }
+        }
+      });
 
-    canvas.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      const zoomFactor = e.deltaY > 0 ? 0.92 : 1.08;
-      zoomGraph(zoomFactor);
-    }, { passive: false });
+      window.addEventListener('mouseup', () => { isDragging = false; });
+
+      canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const zoomFactor = e.deltaY > 0 ? 0.92 : 1.08;
+        zoomGraph(zoomFactor);
+      }, { passive: false });
+    }
 
     function zoomGraph(factor) {
       camera.zoom = Math.max(0.3, Math.min(2.5, camera.zoom * factor));
       renderGraph();
     }
+
     function resetGraphView() {
-      camera = { x: 80, y: 120, zoom: 0.95 };
+      camera = { x: 50, y: 50, zoom: 0.88 };
       renderGraph();
     }
 
@@ -2151,18 +2207,19 @@
         renderGraph();
         return;
       }
-      const match = graphData.nodes.find(n => n.name.toLowerCase().includes(query.toLowerCase()));
+      const match = graphData.nodes.find(n => (n.name && n.name.toLowerCase().includes(query.toLowerCase())) || (n.id && n.id.toLowerCase().includes(query.toLowerCase())));
       if (match) {
         focusNodeInGraph(match.id);
       }
     }
 
     function focusNodeInGraph(nodeId) {
-      const node = graphData.nodes.find(n => n.id.includes(nodeId) || n.name.includes(nodeId));
-      if (node) {
+      const node = graphData.nodes.find(n => (n.id && n.id.includes(nodeId)) || (n.name && n.name.includes(nodeId)));
+      if (node && canvas) {
         selectedNode = node;
-        camera.x = canvas.width / (2 * window.devicePixelRatio) - (node.x + node.width / 2) * camera.zoom;
-        camera.y = canvas.height / (2 * window.devicePixelRatio) - (node.y + node.height / 2) * camera.zoom;
+        const dpr = window.devicePixelRatio || 1;
+        camera.x = canvas.width / (2 * dpr) - (node.x + node.width / 2) * camera.zoom;
+        camera.y = canvas.height / (2 * dpr) - (node.y + node.height / 2) * camera.zoom;
         openDrawer(node);
         renderGraph();
       }
@@ -2170,10 +2227,11 @@
 
     function openDrawer(node) {
       const drawer = document.getElementById('node-drawer');
+      if (!drawer) return;
       document.getElementById('drawer-node-layer').innerText = (node.layer || 'GOLD').toUpperCase();
-      document.getElementById('drawer-node-name').innerText = node.name;
-      document.getElementById('drawer-node-desc').innerText = node.type || 'E-Commerce Lakehouse Model';
-      document.getElementById('drawer-resource-type').innerText = node.layer === 'orchestration' ? 'Airflow DAG' : 'dbt Model';
+      document.getElementById('drawer-node-name').innerText = node.name || node.id;
+      document.getElementById('drawer-node-desc').innerText = node.tooltip ? node.tooltip.replace(/<[^>]*>/g, ' ') : (node.type || 'E-Commerce Lakehouse Model');
+      document.getElementById('drawer-resource-type').innerText = node.resource_type || (node.layer === 'orchestration' ? 'Airflow DAG' : 'dbt Model');
       document.getElementById('drawer-format').innerText = node.format || 'DuckDB Table';
       document.getElementById('drawer-pk').innerText = node.pk || 'event_key';
       document.getElementById('drawer-part').innerText = node.layer === 'bronze' || node.layer === 'landing' ? 'event_date' : 'N/A';
@@ -2183,13 +2241,14 @@
         'dim_product': `-- dbt SCD Type 2 Product Validity\nSELECT\n  product_key,\n  product_id,\n  price,\n  valid_from,\n  valid_to,\n  is_current\nFROM {{ ref('int_products_scd2') }}`,
         'mart_daily_summary': `-- dbt Daily Financial Mart\nSELECT\n  date_day as date,\n  category_l1,\n  COUNT(*) as total_events,\n  SUM(revenue) as total_revenue\nFROM {{ ref('fact_events') }}\nGROUP BY 1, 2`
       };
-      document.getElementById('drawer-code').innerText = codeSnippets[node.name] || `-- Generated dbt/Spark model\nSELECT * FROM {{ source('ecommerce', '${node.name}') }}`;
+      document.getElementById('drawer-code').innerText = codeSnippets[node.name] || `-- Generated dbt/Spark model\nSELECT * FROM {{ source('ecommerce', '${node.name || node.id}') }}`;
 
       drawer.classList.add('open');
     }
 
     function closeDrawer() {
-      document.getElementById('node-drawer').classList.remove('open');
+      const drawer = document.getElementById('node-drawer');
+      if (drawer) drawer.classList.remove('open');
       selectedNode = null;
       renderGraph();
     }
@@ -2203,6 +2262,7 @@
     }
 
     function exportGraphImage() {
+      if (!canvas) return;
       const link = document.createElement('a');
       link.download = 'lakehouse_lineage_architecture.png';
       link.href = canvas.toDataURL();
@@ -2223,15 +2283,16 @@
       }
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
-      // Size the canvas first so renderGraph() has correct dimensions,
-      // then fetch graph data. initGraph() calls renderGraph() after data loads.
-      const container = document.getElementById('lineage-view');
-      canvas.width = container.clientWidth * window.devicePixelRatio;
-      canvas.height = container.clientHeight * window.devicePixelRatio;
-      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    function initApp() {
+      resizeCanvas();
       initGraph();
-    });
+    }
+
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', initApp);
+    } else {
+      setTimeout(initApp, 10);
+    }
   </script>
 </body>
 </html>
