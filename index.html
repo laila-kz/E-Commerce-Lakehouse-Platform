@@ -42,29 +42,29 @@
 
     /* ====== DARK THEME ====== */
     [data-theme="dark"] {
-      --bg: #07090e;
-      --bg-card: #0c1017;
-      --bg-card-hover: #121824;
-      --bg-code: #05070c;
-      --border: rgba(255, 255, 255, 0.08);
-      --border-subtle: rgba(255, 255, 255, 0.04);
-      --text: #e2e8f0;
-      --text-muted: #64748b;
-      --text-dim: #94a3b8;
-      --accent: #38bdf8;
-      --accent-glow: rgba(56, 189, 248, 0.2);
-      --emerald: #10b981;
-      --amber: #f59e0b;
-      --red: #ef4444;
-      --purple: #a855f7;
-      --orange: #f97316;
-      --yellow: #facc15;
-      --header-bg: rgba(7, 9, 14, 0.95);
-      --nav-bg: rgba(10, 13, 20, 0.9);
-      --canvas-bg: #06080d;
-      --canvas-grid: rgba(255, 255, 255, 0.03);
-      --node-bg: #0a0e17;
-      --node-border: rgba(255, 255, 255, 0.08);
+      --bg: #0f172a;
+      --bg-card: #1e293b;
+      --bg-card-hover: #263348;
+      --bg-code: #0d1526;
+      --border: rgba(255, 255, 255, 0.09);
+      --border-subtle: rgba(255, 255, 255, 0.05);
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #cbd5e1;
+      --accent: #60a5fa;
+      --accent-glow: rgba(96, 165, 250, 0.15);
+      --emerald: #34d399;
+      --amber: #fbbf24;
+      --red: #f87171;
+      --purple: #c084fc;
+      --orange: #fb923c;
+      --yellow: #fde047;
+      --header-bg: rgba(15, 23, 42, 0.96);
+      --nav-bg: rgba(15, 23, 42, 0.93);
+      --canvas-bg: #0f172a;
+      --canvas-grid: rgba(255, 255, 255, 0.035);
+      --node-bg: #1e293b;
+      --node-border: rgba(255, 255, 255, 0.1);
     }
 
     html, body {
@@ -133,28 +133,27 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 5px 11px;
+      padding: 5px 12px;
       border-radius: 9999px;
       font-size: 11px;
       font-weight: 600;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.01em;
+      font-family: 'Inter', sans-serif;
       border: 1px solid;
     }
     .badge-green {
-      background: rgba(16, 185, 129, 0.1);
-      border-color: rgba(16, 185, 129, 0.3);
+      background: rgba(52, 211, 153, 0.08);
+      border-color: rgba(52, 211, 153, 0.25);
       color: var(--emerald);
     }
     .badge-blue {
-      background: rgba(56, 189, 248, 0.1);
-      border-color: rgba(56, 189, 248, 0.3);
+      background: rgba(96, 165, 250, 0.08);
+      border-color: rgba(96, 165, 250, 0.25);
       color: var(--accent);
     }
     .badge-amber {
-      background: rgba(245, 158, 11, 0.1);
-      border-color: rgba(245, 158, 11, 0.3);
+      background: rgba(251, 191, 36, 0.08);
+      border-color: rgba(251, 191, 36, 0.25);
       color: var(--amber);
     }
 
@@ -406,28 +405,38 @@
     }
 
     .layer-chip {
-      padding: 4px 9px;
-      border-radius: 6px;
-      font-size: 10.5px;
-      font-weight: 700;
-      letter-spacing: 0.05em;
+      padding: 4px 12px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.01em;
       border: 1px solid transparent;
       cursor: pointer;
       transition: all 0.2s;
-      background: var(--bg-card);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-      opacity: 0.85;
+      background: var(--bg-card-hover);
+      color: var(--text-muted);
+      opacity: 0.7;
     }
-    .layer-chip:hover, .layer-chip.active { opacity: 1; transform: translateY(-1px); }
-    .chip-source { border-color: rgba(234, 88, 12, 0.4); color: #ea580c; }
-    .chip-landing { border-color: rgba(202, 138, 4, 0.4); color: #ca8a04; }
-    .chip-bronze { border-color: rgba(217, 119, 6, 0.4); color: #d97706; }
-    .chip-quality { border-color: rgba(5, 150, 105, 0.4); color: #059669; }
-    .chip-silver { border-color: rgba(2, 132, 199, 0.4); color: #0284c7; }
-    .chip-gold { border-color: rgba(217, 119, 6, 0.4); color: #d97706; }
-    .chip-marts { border-color: rgba(234, 88, 12, 0.4); color: #ea580c; }
-    .chip-bi { border-color: rgba(124, 58, 237, 0.4); color: #7c3aed; }
-    .chip-orchestration { border-color: rgba(14, 165, 233, 0.4); color: #0ea5e9; }
+    .layer-chip:hover { opacity: 1; color: var(--text-dim); }
+    .layer-chip.active { opacity: 1; }
+    .chip-source.active    { background: rgba(251,146,60,0.1);  color: #c2410c; border-color: rgba(251,146,60,0.2); }
+    .chip-landing.active   { background: rgba(253,224,71,0.1);  color: #92400e; border-color: rgba(253,224,71,0.2); }
+    .chip-bronze.active    { background: rgba(251,191,36,0.1);  color: #b45309; border-color: rgba(251,191,36,0.2); }
+    .chip-quality.active   { background: rgba(52,211,153,0.1);  color: #047857; border-color: rgba(52,211,153,0.2); }
+    .chip-silver.active    { background: rgba(96,165,250,0.1);  color: #0369a1; border-color: rgba(96,165,250,0.2); }
+    .chip-gold.active      { background: rgba(251,191,36,0.1);  color: #a16207; border-color: rgba(251,191,36,0.2); }
+    .chip-marts.active     { background: rgba(251,146,60,0.1);  color: #9a3412; border-color: rgba(251,146,60,0.2); }
+    .chip-bi.active        { background: rgba(192,132,252,0.1); color: #6d28d9; border-color: rgba(192,132,252,0.2); }
+    .chip-orchestration.active { background: rgba(96,165,250,0.1); color: #1d4ed8; border-color: rgba(96,165,250,0.2); }
+    [data-theme="dark"] .chip-source.active    { color: #fb923c; }
+    [data-theme="dark"] .chip-landing.active   { color: #fcd34d; }
+    [data-theme="dark"] .chip-bronze.active    { color: #fbbf24; }
+    [data-theme="dark"] .chip-quality.active   { color: #34d399; }
+    [data-theme="dark"] .chip-silver.active    { color: #93c5fd; }
+    [data-theme="dark"] .chip-gold.active      { color: #fcd34d; }
+    [data-theme="dark"] .chip-marts.active     { color: #fb923c; }
+    [data-theme="dark"] .chip-bi.active        { color: #c084fc; }
+    [data-theme="dark"] .chip-orchestration.active { color: #60a5fa; }
 
     #dag-canvas {
       width: 100%;
@@ -1001,15 +1010,15 @@
 
           <div class="controls-row">
             <div class="filter-pills">
-              <span class="layer-chip chip-source active" onclick="toggleLayerFilter('source', this)">SOURCE</span>
-              <span class="layer-chip chip-landing active" onclick="toggleLayerFilter('landing', this)">LANDING</span>
-              <span class="layer-chip chip-bronze active" onclick="toggleLayerFilter('bronze', this)">BRONZE</span>
-              <span class="layer-chip chip-quality active" onclick="toggleLayerFilter('quality', this)">QUALITY GATES</span>
-              <span class="layer-chip chip-silver active" onclick="toggleLayerFilter('silver', this)">SILVER</span>
-              <span class="layer-chip chip-gold active" onclick="toggleLayerFilter('gold', this)">GOLD</span>
-              <span class="layer-chip chip-marts active" onclick="toggleLayerFilter('marts', this)">MARTS</span>
+              <span class="layer-chip chip-source active" onclick="toggleLayerFilter('source', this)">Source</span>
+              <span class="layer-chip chip-landing active" onclick="toggleLayerFilter('landing', this)">Landing</span>
+              <span class="layer-chip chip-bronze active" onclick="toggleLayerFilter('bronze', this)">Bronze</span>
+              <span class="layer-chip chip-quality active" onclick="toggleLayerFilter('quality', this)">Quality Gates</span>
+              <span class="layer-chip chip-silver active" onclick="toggleLayerFilter('silver', this)">Silver</span>
+              <span class="layer-chip chip-gold active" onclick="toggleLayerFilter('gold', this)">Gold</span>
+              <span class="layer-chip chip-marts active" onclick="toggleLayerFilter('marts', this)">Marts</span>
               <span class="layer-chip chip-bi active" onclick="toggleLayerFilter('bi', this)">BI</span>
-              <span class="layer-chip chip-orchestration active" onclick="toggleLayerFilter('orchestration', this)">ORCHESTRATION</span>
+              <span class="layer-chip chip-orchestration active" onclick="toggleLayerFilter('orchestration', this)">Orchestration</span>
             </div>
           </div>
         </div>
@@ -1835,17 +1844,17 @@
     function getLayerColor(layer) {
       const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
       const colors = {
-        source: isDark ? "#f97316" : "#ea580c",
-        landing: isDark ? "#facc15" : "#ca8a04",
-        orchestration: isDark ? "#0ea5e9" : "#0284c7",
-        bronze: isDark ? "#fb923c" : "#d97706",
-        quality: isDark ? "#10b981" : "#059669",
-        silver: isDark ? "#38bdf8" : "#0284c7",
-        gold: isDark ? "#f59e0b" : "#d97706",
-        marts: isDark ? "#ea580c" : "#c2410c",
-        bi: isDark ? "#a855f7" : "#7c3aed"
+        source:        isDark ? '#fb923c' : '#c2410c',
+        landing:       isDark ? '#fcd34d' : '#92400e',
+        orchestration: isDark ? '#60a5fa' : '#1d4ed8',
+        bronze:        isDark ? '#fbbf24' : '#b45309',
+        quality:       isDark ? '#34d399' : '#047857',
+        silver:        isDark ? '#93c5fd' : '#0369a1',
+        gold:          isDark ? '#fcd34d' : '#a16207',
+        marts:         isDark ? '#fb923c' : '#9a3412',
+        bi:            isDark ? '#c084fc' : '#6d28d9'
       };
-      return colors[layer] || "#0284c7";
+      return colors[layer] || (isDark ? '#60a5fa' : '#3b82f6');
     }
 
     function buildDefaultGraph() {
@@ -1998,13 +2007,13 @@
         ctx.bezierCurveTo(cp1x, startY, cp2x, endY, endX, endY);
 
         if (isHighlighted) {
-          ctx.strokeStyle = isDark ? '#38bdf8' : '#0284c7';
+          ctx.strokeStyle = isDark ? '#60a5fa' : '#3b82f6';
           ctx.lineWidth = 2.5;
         } else if (isCritical) {
-          ctx.strokeStyle = isDark ? 'rgba(56,189,248,0.6)' : 'rgba(2,132,199,0.6)';
+          ctx.strokeStyle = isDark ? 'rgba(96,165,250,0.5)' : 'rgba(59,130,246,0.45)';
           ctx.lineWidth = 1.8;
         } else {
-          ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.12)';
+          ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
           ctx.lineWidth = 1.2;
         }
         ctx.stroke();
@@ -2022,11 +2031,11 @@
         ctx.beginPath();
         ctx.roundRect(n.x, n.y, n.width, n.height, 8);
         if (isDark) {
-          ctx.fillStyle = isSelected ? '#131c2d' : (isHovered ? '#101622' : '#0a0e17');
-          ctx.strokeStyle = isSelected ? '#38bdf8' : (isHovered ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.08)');
+          ctx.fillStyle = isSelected ? '#1e3a5f' : (isHovered ? '#253347' : '#1e293b');
+          ctx.strokeStyle = isSelected ? '#60a5fa' : (isHovered ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.1)');
         } else {
-          ctx.fillStyle = isSelected ? '#e0f2fe' : (isHovered ? '#f8fafc' : '#ffffff');
-          ctx.strokeStyle = isSelected ? '#0284c7' : (isHovered ? '#94a3b8' : '#cbd5e1');
+          ctx.fillStyle = isSelected ? '#eff6ff' : (isHovered ? '#f8fafc' : '#ffffff');
+          ctx.strokeStyle = isSelected ? '#3b82f6' : (isHovered ? '#94a3b8' : '#e2e8f0');
         }
         ctx.fill();
         ctx.lineWidth = isSelected ? 2 : 1;
@@ -2036,20 +2045,21 @@
         ctx.fillStyle = color;
         ctx.fillRect(n.x, n.y + 4, 3.5, n.height - 8);
 
-        // Header Tag
-        ctx.font = '600 8.5px JetBrains Mono';
+        // Layer Label — title-case, Inter (not monospace)
+        ctx.font = '500 9px Inter';
         ctx.fillStyle = color;
-        ctx.fillText((n.layer || 'NODE').toUpperCase(), n.x + 12, n.y + 16);
+        const layerLabel = (n.layer || 'node').charAt(0).toUpperCase() + (n.layer || 'node').slice(1);
+        ctx.fillText(layerLabel, n.x + 12, n.y + 16);
 
         // Node Title
-        ctx.font = '700 11.5px Inter';
-        ctx.fillStyle = isDark ? '#f8fafc' : '#0f172a';
+        ctx.font = '600 11.5px Inter';
+        ctx.fillStyle = isDark ? '#f1f5f9' : '#0f172a';
         const displayTitle = n.name.length > 20 ? n.name.slice(0, 18) + '..' : n.name;
         ctx.fillText(displayTitle, n.x + 12, n.y + 32);
 
-        // Format Badge
-        ctx.font = '500 9px JetBrains Mono';
-        ctx.fillStyle = isDark ? '#64748b' : '#64748b';
+        // Format / Type Badge
+        ctx.font = '400 9px Inter';
+        ctx.fillStyle = isDark ? '#64748b' : '#94a3b8';
         ctx.fillText(n.format || 'Table', n.x + 12, n.y + 46);
       });
 
