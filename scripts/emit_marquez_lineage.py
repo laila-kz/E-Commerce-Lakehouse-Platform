@@ -1,25 +1,25 @@
-#!/usr/bin/env python3
 """
 Emit complete OpenLineage metadata to Marquez API
 Namespace: ecommerce_lakehouse
-Lineage: Raw S3 -> Bronze Delta -> Silver Delta -> dbt Staging -> Intermediate -> Dims & Facts -> Gold Marts -> Reconciliation
+Lineage: Raw S3 -> Bronze Delta -> Silver Delta -> dbt Staging
+         -> Intermediate -> Dims & Facts -> Gold Marts -> Reconciliation
 """
 
+from datetime import datetime, timezone
 import json
 import os
-import sys
-import uuid
-import urllib.request
 import urllib.error
-from datetime import datetime, timezone
+import urllib.request
+import uuid
 
 MARQUEZ_URL = os.environ.get("MARQUEZ_URL", "http://localhost:5000/api/v1/lineage")
 NAMESPACE = "ecommerce_lakehouse"
 
+
 def emit_event(job_name, inputs, outputs, event_type="COMPLETE"):
     now = datetime.now(timezone.utc).isoformat()
     run_id = str(uuid.uuid4())
-    
+
     event = {
         "eventType": event_type,
         "eventTime": now,
@@ -34,19 +34,20 @@ def emit_event(job_name, inputs, outputs, event_type="COMPLETE"):
         "outputs": outputs,
         "producer": "https://github.com/OpenLineage/OpenLineage"
     }
-    
+
     data = json.dumps(event).encode("utf-8")
     req = urllib.request.Request(
         MARQUEZ_URL,
         data=data,
         headers={"Content-Type": "application/json"}
     )
-    
+
     try:
         with urllib.request.urlopen(req) as response:
             print(f"[LINEAGE] Emitted '{job_name}' ({event_type}) -> Status: {response.status}")
     except urllib.error.URLError as e:
         print(f"[ERROR] Failed to emit lineage for '{job_name}': {e}")
+
 
 def main():
     print(f"Emitting OpenLineage events to {MARQUEZ_URL} in namespace '{NAMESPACE}'...")
@@ -206,7 +207,11 @@ def main():
         ],
         outputs=[
             {"namespace": "duckdb://dbt/dev.duckdb", "name": "mart_daily_summary", "facets": marts_daily_schema},
-            {"namespace": "duckdb://dbt/dev.duckdb", "name": "mart_customer_retention", "facets": marts_retention_schema}
+            {
+                "namespace": "duckdb://dbt/dev.duckdb",
+                "name": "mart_customer_retention",
+                "facets": marts_retention_schema
+            }
         ]
     )
 
@@ -224,6 +229,7 @@ def main():
     )
 
     print("\n[SUCCESS] Successfully populated Marquez with full Lakehouse Lineage & Governance metadata!")
+
 
 if __name__ == "__main__":
     main()

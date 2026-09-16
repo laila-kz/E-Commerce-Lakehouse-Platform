@@ -12,6 +12,7 @@ import urllib.error
 
 logger = logging.getLogger(__name__)
 
+
 def slack_alert_on_failure(context):
     """
     Airflow task failure callback hook.

@@ -11,13 +11,18 @@ import logging
 import argparse
 from datetime import datetime, timedelta
 
+from delta.tables import DeltaTable
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import (
-    col, current_timestamp, lit, sha2, concat_ws,
-    split, when, size, to_utc_timestamp, date_format,
-    max as spark_max
+    col,
+    concat_ws,
+    date_format,
+    sha2,
+    size,
+    split,
+    to_utc_timestamp,
+    when,
 )
-from delta.tables import DeltaTable
 
 try:
     from dotenv import load_dotenv
@@ -131,7 +136,7 @@ def create_spark_session(logger):
         .config("spark.hadoop.fs.s3a.path.style.access", "true")
         .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false")
         .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
-        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension,org.lakehouse.optimizer.EcommerceSparkExtensions")
         .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
         .getOrCreate()
     )
@@ -473,7 +478,7 @@ def merge_into_silver(spark, silver_path, source_df, logger):
         .merge(
             source_df.alias("source"),
             "target.event_key = source.event_key"
-        ) \
+    ) \
         .whenNotMatchedInsertAll() \
         .execute()
 
@@ -655,7 +660,7 @@ def main():
         if not verification["verified"]:
             raise RuntimeError("MERGE verification failed")
 
-        #****************************************************
+        # ****************************************************
         # ===== SIMULATED CRASH INJECTION POINTS =====
         # Named failure test matrix hooks for failure-injection testing
         if (
@@ -672,7 +677,7 @@ def main():
                 }
             )
             raise RuntimeError("Simulated crash: MERGE committed, watermark NOT advanced")
-        #****************************************************
+        # ****************************************************
 
         # Advance watermark ONLY in incremental mode
         if args.mode == "incremental":

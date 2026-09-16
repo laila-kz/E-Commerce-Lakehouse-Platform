@@ -1,0 +1,4 @@
+[warn] sbt-assembly_2.12_1.0-2.1.5.jar no longer exists at /root/.cache/coursier/v1/https/repo1.maven.org/maven2/com/eed3si9n/sbt-assembly_2.12_1.0/2.1.5/sbt-assembly_2.12_1.0-2.1.5.jar
+[debug] not up to date. inChanged = false, force = false
+[debug] Updating ProjectRef(uri("file:/app/project/"), "app-build")...
+[debug] Done updating ProjectRef(uri("file:/app/project/"), "app-build")

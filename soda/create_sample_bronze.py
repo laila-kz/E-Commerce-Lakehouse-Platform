@@ -18,11 +18,13 @@ spark = SparkSession.builder \
 
 print("Generating 1500 valid sample events...")
 data = [
-    (datetime.now(), "view", 100000 + i, 200000 + i, "electronics.smartphone", "brand_a", 299.99 + i, 500000 + i, f"session_{i}")
+    (datetime.now(), "view", 100000 + i, 200000 + i, "electronics.smartphone",
+     "brand_a", 299.99 + i, 500000 + i, f"session_{i}")
     for i in range(1500)
 ]
 
-columns = ["event_time", "event_type", "product_id", "category_id", "category_code", "brand", "price", "user_id", "user_session"]
+columns = ["event_time", "event_type", "product_id", "category_id",
+           "category_code", "brand", "price", "user_id", "user_session"]
 df = spark.createDataFrame(data, columns)
 
 df_with_lineage = df \

@@ -25,8 +25,7 @@ models:
         tests:
           - not_null
           - accepted_values:
-              arguments:
-                values: ['view', 'cart', 'remove_from_cart', 'purchase']
+              values: ['view', 'cart', 'remove_from_cart', 'purchase']
 
       - name: event_time
         description: "UTC timestamp when event occurred"

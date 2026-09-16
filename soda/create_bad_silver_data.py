@@ -2,10 +2,29 @@
 Create intentionally bad Silver test data to verify Soda checks fail
 """
 
-from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, StringType, LongType, DoubleType, TimestampType
 from datetime import datetime
-from pyspark.sql.functions import current_timestamp, lit, sha2, concat_ws, to_utc_timestamp, date_format
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import (
+    col,
+    concat_ws,
+    current_timestamp,
+    date_format,
+    lit,
+    sha2,
+    size,
+    split,
+    to_date,
+    to_utc_timestamp,
+    when,
+)
+from pyspark.sql.types import (
+    DoubleType,
+    LongType,
+    StringType,
+    StructField,
+    StructType,
+    TimestampType,
+)
 
 # Create Spark session
 spark = SparkSession.builder \
@@ -30,14 +49,18 @@ print("📊 Creating intentionally bad Silver test data...")
 bad_data = []
 
 # Good row
-bad_data.append((datetime.now(), "view", 777777, 999999, "electronics.test", "test_brand", 99.99, 777777, "session_good"))
+bad_data.append((datetime.now(), "view", 777777, 999999, "electronics.test",
+                "test_brand", 99.99, 777777, "session_good"))
 
 # 1. Duplicate event_key (same user_id, event_type, product_id, event_time)
-bad_data.append((datetime.now(), "view", 888888, 999999, "electronics.test", "test_brand", 99.99, 888888, "session_dup_1"))
-bad_data.append((datetime.now(), "view", 888888, 999999, "electronics.test", "test_brand", 99.99, 888888, "session_dup_2"))
+bad_data.append((datetime.now(), "view", 888888, 999999, "electronics.test",
+                "test_brand", 99.99, 888888, "session_dup_1"))
+bad_data.append((datetime.now(), "view", 888888, 999999, "electronics.test",
+                "test_brand", 99.99, 888888, "session_dup_2"))
 
 # 2. Negative price
-bad_data.append((datetime.now(), "view", 999999, 999999, "electronics.test", "test_brand", -50.00, 999999, "session_neg_price"))
+bad_data.append((datetime.now(), "view", 999999, 999999, "electronics.test",
+                "test_brand", -50.00, 999999, "session_neg_price"))
 
 # 3. Null user_session
 bad_data.append((datetime.now(), "view", 111111, 999999, "electronics.test", "test_brand", 99.99, 111111, None))
@@ -60,7 +83,6 @@ schema = StructType([
 df = spark.createDataFrame(bad_data, schema)
 
 # Add lineage and compute event_key (same logic as silver_transform)
-from pyspark.sql.functions import current_timestamp, lit, sha2, concat_ws, to_utc_timestamp, date_format, split, when, size
 
 # Format event_time as ISO-8601 UTC
 df = df.withColumn(

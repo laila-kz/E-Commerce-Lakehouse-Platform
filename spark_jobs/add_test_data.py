@@ -1,4 +1,5 @@
 # spark_jobs/add_test_data.py
+from pyspark.sql.types import StructType, StructField, StringType, LongType, DoubleType, TimestampType
 from pyspark.sql import SparkSession
 from datetime import datetime
 
@@ -20,7 +21,6 @@ test_data = [
     (datetime.now(), "purchase", 999997, 999999, "electronics.test", "test_brand", 99.99, 999997, "test_session_3"),
 ]
 
-from pyspark.sql.types import StructType, StructField, StringType, LongType, DoubleType, TimestampType
 schema = StructType([
     StructField("event_time", TimestampType(), True),
     StructField("event_type", StringType(), True),

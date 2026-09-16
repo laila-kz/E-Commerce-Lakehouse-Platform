@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 generate_graph.py
 =================
@@ -13,11 +13,10 @@ Usage:
     python scripts/generate_graph.py --force-static
 """
 
-import json
 import argparse
-import sys
-from pathlib import Path
 from datetime import datetime
+import json
+from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -326,8 +325,10 @@ def build_static_fallback():
         ("model.ecommerce_lakehouse.fact_purchases",              "model.ecommerce_lakehouse.mart_category_performance"),
         ("model.ecommerce_lakehouse.dim_product",                 "model.ecommerce_lakehouse.mart_category_performance"),
         ("model.ecommerce_lakehouse.mart_daily_summary",          "exposure.ecommerce_lakehouse.daily_executive_dashboard"),
-        ("model.ecommerce_lakehouse.mart_customer_retention",     "exposure.ecommerce_lakehouse.retention_analytics_dashboard"),
-        ("model.ecommerce_lakehouse.mart_category_performance",   "exposure.ecommerce_lakehouse.category_performance_dashboard"),
+        ("model.ecommerce_lakehouse.mart_customer_retention",
+         "exposure.ecommerce_lakehouse.retention_analytics_dashboard"),
+        ("model.ecommerce_lakehouse.mart_category_performance",
+         "exposure.ecommerce_lakehouse.category_performance_dashboard"),
     ]
 
     dbt_nodes_map = {n["id"]: n for n in dbt_raw}
@@ -380,7 +381,7 @@ def main():
         source = "static fallback"
 
     node_ids = {n["id"] for n in nodes}
-    valid_links = [l for l in links if l["source"] in node_ids and l["target"] in node_ids]
+    valid_links = [link_item for link_item in links if link_item["source"] in node_ids and link_item["target"] in node_ids]
 
     layer_counts = {}
     for n in nodes:

@@ -1,3 +1,5 @@
+{{ config(tags = ['s3_dependent', 'integration']) }}
+
 -- Singular test: Verify fact_events preserves the exact row count of int_events_enriched
 with enriched_count as (
 

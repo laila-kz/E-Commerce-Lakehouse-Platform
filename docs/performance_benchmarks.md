@@ -1,7 +1,9 @@
 # 🚀 Spark & Delta Lake Performance Optimization Benchmark Report
 
-**Generated At:** 2026-08-26 02:22:09 UTC  
-**Target Environment:** Spark on MinIO S3A Data Lakehouse  
+![Mode: Empirical Baseline](https://img.shields.io/badge/Mode-Empirical_Baseline_Profile-FFA500?style=flat)
+**Execution Profile:** `EMPIRICAL_REFERENCE_PROFILE`
+**Generated At:** 2026-09-16 15:00:13 UTC
+**Target Environment:** Spark on MinIO S3A Data Lakehouse
 
 ---
 

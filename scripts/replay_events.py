@@ -91,7 +91,7 @@ def get_duckdb_connection():
         # Use an in-memory DB for audit writes — they'll be written to the JSON
         # report on disk regardless.
         logger.warning(
-            f"dev.duckdb is locked by another process. "
+            "dev.duckdb is locked by another process. "
             "Audit table will be in-memory this run; JSON report is always written."
         )
         return duckdb.connect(":memory:")
@@ -258,7 +258,7 @@ def main():
     # ── Dry run ─────────────────────────────────────────────────────────────
     if args.dry_run:
         logger.info("[DRY RUN] Simulating backfill plan:")
-        logger.info(f"  - Target Table: Silver Delta & Gold Marts")
+        logger.info("  - Target Table: Silver Delta & Gold Marts")
         logger.info(f"  - Filter: event_time BETWEEN '{args.start_date}' AND '{args.end_date}'")
         logger.info("  - Production Watermark: ISOLATED (will NOT be touched)")
         logger.info("Dry run completed successfully. No data mutated.")
@@ -266,13 +266,13 @@ def main():
 
     # ── Live run ─────────────────────────────────────────────────────────────
     silver_result = run_silver_step(args, replay_id)
-    gold_result   = run_gold_step(args)
+    gold_result = run_gold_step(args)
 
     # Determine overall status
     if silver_result == "FAILED" or gold_result == "FAILED":
         status = "FAILED"
     elif silver_result in ("SKIPPED_NO_SPARK", "SKIPPED_NOT_REQUIRED") and \
-         gold_result in ("SUCCESS", "SKIPPED_DB_LOCKED", "SKIPPED_NOT_REQUIRED"):
+            gold_result in ("SUCCESS", "SKIPPED_DB_LOCKED", "SKIPPED_NOT_REQUIRED"):
         status = "PARTIAL"
     elif gold_result == "SKIPPED_DB_LOCKED":
         status = "PARTIAL"
@@ -284,7 +284,7 @@ def main():
     duration = (datetime.utcnow() - start_time).total_seconds()
 
     # Simulated row counts (real counts come from Silver transform stdout in a full run)
-    rows_read    = 10000 if silver_result == "SUCCESS" else 0
+    rows_read = 10000 if silver_result == "SUCCESS" else 0
     rows_inserted = 9850 if silver_result == "SUCCESS" else 0
 
     # ── Persist audit record ─────────────────────────────────────────────────

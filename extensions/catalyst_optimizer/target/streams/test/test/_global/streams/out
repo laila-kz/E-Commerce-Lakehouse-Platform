@@ -1,0 +1,10 @@
+[debug] Running TaskDef(org.lakehouse.optimizer.DynamicEcommercePartitionPrunerSuite, org.scalatest.tools.Framework$$anon$1@42b603f2, false, [SuiteSelector])
+[info] DynamicEcommercePartitionPrunerSuite:
+[info] - DynamicEcommercePartitionPruner collapses consecutive Filter nodes into a single And node
+[info] Run completed in 12 seconds, 583 milliseconds.
+[info] Total number of tests run: 1
+[info] Suites: completed 1, aborted 0
+[info] Tests: succeeded 1, failed 0, canceled 0, ignored 0, pending 0
+[info] All tests passed.
+[debug] Passed tests:
+[debug] 	org.lakehouse.optimizer.DynamicEcommercePartitionPrunerSuite

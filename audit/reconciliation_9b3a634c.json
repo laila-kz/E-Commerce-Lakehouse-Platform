@@ -1,0 +1,44 @@
+{
+  "run_id": "9b3a634c",
+  "timestamp": "2026-09-16T14:10:26.237326Z",
+  "summary": {
+    "pass": 1,
+    "fail": 0,
+    "skip": 2
+  },
+  "checks": [
+    {
+      "run_id": "9b3a634c",
+      "check_name": "silver_to_fact_events_row_parity",
+      "source_layer": "Silver (stg_events)",
+      "target_layer": "Gold (fact_events)",
+      "source_count": -1,
+      "target_count": -1,
+      "drift": -1,
+      "status": "SKIP",
+      "executed_at": "2026-09-16 14:10:21.378574"
+    },
+    {
+      "run_id": "9b3a634c",
+      "check_name": "purchases_to_mart_revenue_parity",
+      "source_layer": "Gold (fact_purchases)",
+      "target_layer": "Gold (mart_daily_summary)",
+      "source_count": 377885,
+      "target_count": 377885,
+      "drift": 0,
+      "status": "PASS",
+      "executed_at": "2026-09-16 14:10:21.378574"
+    },
+    {
+      "run_id": "9b3a634c",
+      "check_name": "silver_to_fact_purchases_parity",
+      "source_layer": "Silver (stg_events)",
+      "target_layer": "Gold (fact_purchases)",
+      "source_count": -1,
+      "target_count": -1,
+      "drift": -1,
+      "status": "SKIP",
+      "executed_at": "2026-09-16 14:10:21.378574"
+    }
+  ]
+}

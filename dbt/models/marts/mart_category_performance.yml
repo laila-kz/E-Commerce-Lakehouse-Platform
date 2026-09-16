@@ -29,5 +29,4 @@ models:
         tests:
           - not_null
           - accepted_values:
-              arguments:
-                values: ['new_category', 'no_prior_revenue', 'comparable']
+              values: ['new_category', 'no_prior_revenue', 'comparable']

@@ -37,27 +37,27 @@ try:
         .option("columnNameOfCorruptRecord", "_corrupt_record") \
         .schema(BRONZE_EVENT_SCHEMA) \
         .csv(sample_path)
-    
+
     print("✅ Schema applied successfully!")
-    
+
     # Show the schema
     print("\n📋 Schema from Spark:")
     print("=" * 60)
     df.printSchema()
-    
+
     # Count records
     record_count = df.count()
     print(f"\n📊 Total Records: {record_count:,}")
-    
+
     # Show sample data (first 10 rows)
     print("\n📊 Sample Data (first 10 rows):")
     print("=" * 60)
     df.show(10, truncate=False)
-    
+
     # Check for null values in key columns
     print("\n🔍 Null Value Check:")
     print("=" * 60)
-    
+
     null_counts = {
         'event_time': df.filter(df.event_time.isNull()).count(),
         'category_code': df.filter(df.category_code.isNull()).count(),
@@ -65,11 +65,11 @@ try:
         'user_session': df.filter(df.user_session.isNull()).count(),
         'price': df.filter(df.price.isNull()).count()
     }
-    
+
     for col, count in null_counts.items():
         percentage = (count / record_count) * 100
         print(f"{col:15} | NULL count: {count:8} | {percentage:5.2f}%")
-    
+
     # Check for malformed rows
     if '_corrupt_record' in df.columns:
         corrupt_count = df.filter(df._corrupt_record.isNotNull()).count()
@@ -77,7 +77,7 @@ try:
         if corrupt_count > 0:
             print("\nSample malformed rows:")
             df.filter(df._corrupt_record.isNotNull()).select('_corrupt_record').show(5, truncate=False)
-    
+
 except Exception as e:
     print(f"❌ Error: {e}")
     print("\n💡 Tip: Check that your data exists at: " + sample_path)

@@ -5,16 +5,17 @@ Runs Raw, Bronze, and Silver quality checks in sequence.
 Aggregates results into one clear pass/fail signal.
 """
 
-import os
-import sys
-import json
 import argparse
-import subprocess
-import logging
 from datetime import datetime
+import json
+import logging
 from pathlib import Path
+import subprocess
+import sys
 
 # ===== Logging Setup (consistent with other scripts) =====
+
+
 class JSONFormatter(logging.Formatter):
     def format(self, record):
         log_entry = {
@@ -29,6 +30,7 @@ class JSONFormatter(logging.Formatter):
             log_entry.update(record.extra)
         return json.dumps(log_entry)
 
+
 def setup_logging():
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JSONFormatter())
@@ -39,6 +41,8 @@ def setup_logging():
     return logger
 
 # ===== Argument Parsing =====
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Unified Quality Gate Runner - Runs Raw, Bronze, Silver checks"
@@ -64,15 +68,17 @@ def parse_args():
 
 # ===== Suite Runner Functions =====
 
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 
 def run_raw_checks(logger):
     """Run Raw layer quality checks"""
     logger.info("Running Raw checks", extra={"event": "raw_start"})
-    
+
     cmd = ["python3", str(PROJECT_ROOT / "soda/run_raw_checks.py")]
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROJECT_ROOT))
-    
+
     logger.info(
         "Raw checks complete",
         extra={
@@ -82,7 +88,7 @@ def run_raw_checks(logger):
             "stderr": result.stderr
         }
     )
-    
+
     return {
         "name": "raw",
         "exit_code": result.returncode,
@@ -91,19 +97,20 @@ def run_raw_checks(logger):
         "passed": result.returncode == 0
     }
 
+
 def run_bronze_checks(logger):
     """Run Bronze layer Soda checks"""
     logger.info("Running Bronze checks", extra={"event": "bronze_start"})
-    
+
     cmd = [
-        "python3", 
+        "python3",
         str(PROJECT_ROOT / "soda/run_soda_scan.py"),
         "s3a://bronze/ecommerce_events/",
         str(PROJECT_ROOT / "soda/checks/bronze_checks.yml"),
         str(PROJECT_ROOT / "soda/configurations/spark_configuration.yml")
     ]
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROJECT_ROOT))
-    
+
     logger.info(
         "Bronze checks complete",
         extra={
@@ -113,7 +120,7 @@ def run_bronze_checks(logger):
             "stderr": result.stderr
         }
     )
-    
+
     return {
         "name": "bronze",
         "exit_code": result.returncode,
@@ -122,13 +129,14 @@ def run_bronze_checks(logger):
         "passed": result.returncode == 0
     }
 
+
 def run_silver_checks(logger):
     """Run Silver layer Soda checks"""
     logger.info("Running Silver checks", extra={"event": "silver_start"})
-    
+
     cmd = ["python3", str(PROJECT_ROOT / "soda/run_silver_scan.py")]
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROJECT_ROOT))
-    
+
     logger.info(
         "Silver checks complete",
         extra={
@@ -138,7 +146,7 @@ def run_silver_checks(logger):
             "stderr": result.stderr
         }
     )
-    
+
     return {
         "name": "silver",
         "exit_code": result.returncode,
@@ -149,12 +157,13 @@ def run_silver_checks(logger):
 
 # ===== Aggregation Functions =====
 
+
 def aggregate_results(results):
     """Aggregate individual suite results into overall status"""
     passed_count = sum(1 for r in results if r["passed"])
     failed_count = len(results) - passed_count
     overall_passed = failed_count == 0
-    
+
     return {
         "overall_status": "PASSED" if overall_passed else "FAILED",
         "overall_exit_code": 0 if overall_passed else 1,
@@ -166,20 +175,21 @@ def aggregate_results(results):
         "suites": results
     }
 
+
 def write_report(aggregated, report_dir, logger):
     """Write aggregated report to file"""
     Path(report_dir).mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     report_path = Path(report_dir) / f"quality_gate_report_{timestamp}.json"
-    
+
     report_data = {
         "timestamp": datetime.utcnow().isoformat() + "Z",
         **aggregated
     }
-    
+
     with open(report_path, "w") as f:
         json.dump(report_data, f, indent=2)
-    
+
     logger.info(
         "Report written",
         extra={
@@ -187,16 +197,17 @@ def write_report(aggregated, report_dir, logger):
             "path": str(report_path)
         }
     )
-    
+
     return report_path
 
 # ===== Main =====
+
 
 def main():
     args = parse_args()
     logger = setup_logging()
     logger.setLevel(getattr(logging, args.log_level))
-    
+
     logger.info(
         "Quality gate started",
         extra={
@@ -205,20 +216,12 @@ def main():
             "report_dir": args.report_dir
         }
     )
-    
-    # Determine which suites to run
-    suite_map = {
-        "raw": run_raw_checks,
-        "bronze": run_bronze_checks,
-        "silver": run_silver_checks,
-        "all": None  # Handle separately
-    }
-    
+
     if args.layer == "all":
         suites = ["raw", "bronze", "silver"]
     else:
         suites = [args.layer]
-    
+
     # Run each suite
     results = []
     for suite_name in suites:
@@ -227,16 +230,16 @@ def main():
             "bronze": run_bronze_checks,
             "silver": run_silver_checks
         }[suite_name]
-        
+
         result = runner(logger)
         results.append(result)
-    
+
     # Aggregate results
     aggregated = aggregate_results(results)
-    
+
     # Write report
     report_path = write_report(aggregated, args.report_dir, logger)
-    
+
     # Log final summary
     logger.info(
         "Quality gate complete",
@@ -248,7 +251,7 @@ def main():
             "report_path": str(report_path)
         }
     )
-    
+
     # Print summary to stdout
     print("\n" + "=" * 60)
     print("📊 QUALITY GATE SUMMARY")
@@ -257,14 +260,15 @@ def main():
     print(f"Suites: {aggregated['summary']['passed']}/{aggregated['summary']['total']} passed")
     print(f"Report: {report_path}")
     print("=" * 60)
-    
+
     for suite in aggregated["suites"]:
         status = "✅ PASSED" if suite["passed"] else "❌ FAILED"
         print(f"{suite['name'].upper():8} {status}")
-    
+
     print("=" * 60)
-    
+
     sys.exit(aggregated["overall_exit_code"])
+
 
 if __name__ == "__main__":
     main()

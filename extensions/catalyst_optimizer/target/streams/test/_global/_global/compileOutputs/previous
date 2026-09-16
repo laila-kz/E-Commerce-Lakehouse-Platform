@@ -1,0 +1,1 @@
+["sbt.Task[scala.collection.Seq[java.nio.file.Path]]",["/app/target/scala-2.12/test-classes/org/lakehouse/optimizer/DynamicEcommercePartitionPrunerSuite.class","/app/target/scala-2.12/test-zinc/inc_compile_2.12.zip"]]

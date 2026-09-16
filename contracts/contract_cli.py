@@ -7,15 +7,14 @@ Enterprise Data Contract Engine (lakehouse-contract-cli)
 - Maintains a persistent schema registry table in DuckDB
 """
 
-import os
-import sys
-import json
-import logging
 import argparse
-import urllib.request
-from datetime import datetime
-from pathlib import Path
 import csv
+from datetime import datetime
+import json
+import os
+from pathlib import Path
+import sys
+
 import duckdb
 
 try:
@@ -156,11 +155,11 @@ def validate_dataset(data_path, contract):
     """Validate CSV against contract rules"""
     violations = []
     columns_spec = contract.get("columns", {})
-    
+
     with open(data_path, "r", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         actual_headers = reader.fieldnames or []
-        
+
         # 1. Required Columns Check
         for col_name, spec in columns_spec.items():
             if spec.get("required", False) and col_name not in actual_headers:
@@ -171,7 +170,7 @@ def validate_dataset(data_path, contract):
                     "expected": f"Column '{col_name}' present",
                     "actual": "Column missing from dataset headers"
                 })
-        
+
         # 2. Row sampling validation
         row_count = 0
         null_counts = {col: 0 for col in columns_spec}
@@ -204,14 +203,14 @@ def quarantine_bad_batch(data_path, violations, quarantine_dir="./data/quarantin
     filename = Path(data_path).name
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
     quarantine_meta_path = os.path.join(quarantine_dir, f"quarantine_{timestamp}_{filename}.json")
-    
+
     with open(quarantine_meta_path, "w") as f:
         json.dump({
             "source_file": data_path,
             "quarantined_at": datetime.utcnow().isoformat() + "Z",
             "violations": violations
         }, f, indent=2)
-    
+
     print(f"[QUARANTINE] Violating batch quarantined with metadata: {quarantine_meta_path}")
     return quarantine_meta_path
 
@@ -295,11 +294,14 @@ def main():
         if not val_res["valid"]:
             print(f"\n[CONTRACT VIOLATION] {len(val_res['violations'])} contract rules violated in '{input_file}':")
             for v in val_res["violations"]:
-                print(f"  - [{v.get('severity', 'BREAKING')}] {v['rule']}: {v.get('expected', '') or v.get('column', '')}")
-            quarantine_bad_batch(input_file, val_res["violations"], getattr(args, "quarantine_dir", "./data/quarantine"))
+                detail = v.get('expected', '') or v.get('column', '')
+                print(f"  - [{v.get('severity', 'BREAKING')}] {v['rule']}: {detail}")
+            quarantine_bad_batch(input_file, val_res["violations"], getattr(
+                args, "quarantine_dir", "./data/quarantine"))
             return 1
 
-        print(f"\n[CONTRACT PASS] '{input_file}' successfully passed all contract checks for version {contract.get('version')}!\n")
+        ver = contract.get('version')
+        print(f"\n[CONTRACT PASS] '{input_file}' successfully passed all contract checks for version {ver}!\n")
         return 0
 
 

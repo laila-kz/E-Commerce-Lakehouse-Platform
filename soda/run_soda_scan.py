@@ -4,9 +4,8 @@ Soda Core Scan Runner
 Run quality checks against Bronze Delta table
 """
 
-import sys
 import os
-from pathlib import Path
+import sys
 
 # Add Spark python paths if not already in sys.path
 spark_python = "/opt/spark/python"
@@ -23,6 +22,7 @@ DELTA_JARS = ",".join([
     "/opt/spark/jars-extra/hadoop-aws-3.3.4.jar",
     "/opt/spark/jars-extra/aws-java-sdk-bundle-1.12.262.jar",
 ])
+
 
 def run_soda_scan(table_path, checks_file, configuration_file):
     """
@@ -53,13 +53,13 @@ def run_soda_scan(table_path, checks_file, configuration_file):
         .getOrCreate()
 
     df = spark.read.format("delta").load(table_path)
-    
+
     # Determine table view name based on table path or checks file
     if "test_bad_events" in table_path:
         view_name = "test_bad_events"
     else:
         view_name = "bronze_ecommerce_events"
-        
+
     df.createOrReplaceTempView(view_name)
 
     scan = Scan()
@@ -85,6 +85,7 @@ def run_soda_scan(table_path, checks_file, configuration_file):
 
     spark.stop()
     return exit_code
+
 
 if __name__ == "__main__":
     table_path = sys.argv[1] if len(sys.argv) > 1 else "s3a://bronze/ecommerce_events/"

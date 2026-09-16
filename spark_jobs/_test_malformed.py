@@ -5,7 +5,6 @@ Based on your actual data format
 
 from pyspark.sql import SparkSession
 from schemas import BRONZE_EVENT_SCHEMA
-import os
 
 # Create Spark session
 spark = SparkSession.builder \

@@ -1,0 +1,59 @@
+dataset_name: "ecommerce_events"
+version: "2.0.0-breaking"
+description: "Simulated breaking schema with dropped column, altered data type, and tightened nullability for CI contract gate evaluation"
+owner: "data-platform-team@company.com"
+
+sla:
+  max_latency_hours: 12
+  max_null_percentage_overall: 5.0
+
+columns:
+  event_time:
+    type: "timestamp"
+    required: true
+    nullable: false
+
+  event_type:
+    type: "string"
+    required: true
+    nullable: false
+    allowed_values:
+      - "view"
+      - "cart"
+      - "remove_from_cart"
+      - "purchase"
+
+  # BREAKING CHANGE 1: product_id type changed from 'long' to 'string'
+  product_id:
+    type: "string"
+    required: true
+    nullable: false
+
+  category_id:
+    type: "long"
+    required: false
+    nullable: true
+
+  # BREAKING CHANGE 2: category_code column dropped entirely
+
+  # BREAKING CHANGE 3: brand nullability tightened (nullable: true -> nullable: false)
+  brand:
+    type: "string"
+    required: false
+    nullable: false
+
+  price:
+    type: "double"
+    required: true
+    nullable: true
+    min_value: 0.0
+
+  user_id:
+    type: "long"
+    required: true
+    nullable: false
+
+  user_session:
+    type: "string"
+    required: true
+    nullable: false

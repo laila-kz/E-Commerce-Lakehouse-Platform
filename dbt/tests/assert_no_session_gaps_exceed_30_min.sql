@@ -10,7 +10,7 @@ with session_events as (
             partition by session_id
             order by event_time, event_key
         ) as prev_event_in_session
-    from {{ ref('int_sessions') }}
+    from {{ ref('fact_events') }}
 )
 
 select

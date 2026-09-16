@@ -9,7 +9,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 USER airflow
 RUN pip install --no-cache-dir \
-    dbt-duckdb \
+    dbt-core==1.8.8 \
+    dbt-duckdb==1.8.4 \
+    dbt-adapters==1.11.0 \
     boto3 \
     tenacity \
     python-dotenv \

@@ -5,9 +5,10 @@
 [![dbt](https://img.shields.io/badge/dbt-FF694B?style=flat&logo=dbt&logoColor=white)](https://www.getdbt.com/)
 [![DuckDB](https://img.shields.io/badge/DuckDB-FFF000?style=flat&logo=duckdb&logoColor=black)](https://duckdb.org/)
 [![Apache Airflow](https://img.shields.io/badge/Airflow-017CEE?style=flat&logo=apacheairflow&logoColor=white)](https://airflow.apache.org/)
-[![OpenLineage](https://img.shields.io/badge/OpenLineage-Marquez-blue?style=flat)](https://openlineage.io/)
+[![Scala 2.12](https://img.shields.io/badge/Scala-2.12.18-DC322F?style=flat&logo=scala&logoColor=white)](https://www.scala-lang.org/)
+[![Apache Spark Catalyst](https://img.shields.io/badge/Spark_Catalyst-Optimizer_Rule-E25A1C?style=flat&logo=apachespark&logoColor=white)](https://spark.apache.org/)
 
-A production-patterned local **Data Lakehouse Platform** built for high-volume e-commerce clickstream events. It combines **Apache Spark + Delta Lake** on **MinIO S3** for scalable transactional ingestion, automated **Soda Core quality gates**, a **YAML Data Contract engine**, **dbt + DuckDB** for dimensional modeling (SCD Type 2, sessionization, and business marts), orchestrated under **Apache Airflow** with end-to-end **OpenLineage metadata governance**.
+A production-patterned local **Data Lakehouse Platform** built for high-volume e-commerce clickstream events. It combines **Apache Spark (PySpark + Custom Scala Catalyst Optimizer Rules) + Delta Lake** on **MinIO S3** for scalable transactional ingestion, automated **Soda Core quality gates**, a **YAML Data Contract engine**, **dbt + DuckDB** for dimensional modeling (SCD Type 2, sessionization, and business marts), orchestrated under **Apache Airflow** with end-to-end **OpenLineage metadata governance**.
 
 ---
 
@@ -46,7 +47,7 @@ graph TD
         M -->|SCD Type 2 & Star Schema| N[dim_customer / dim_product / dim_date]
         N --> O[fact_events / fact_purchases]
         O -->|Incremental delete+insert| P[mart_daily_summary / mart_retention / mart_category]
-        P -->|83 dbt Tests Passing| R[dbt Exposures & BI Dashboards]
+        P -->|84 dbt Tests Passing| R[dbt Exposures & BI Dashboards]
     end
 
     subgraph Governance ["4. Enterprise Governance (OpenLineage + Marquez)"]
@@ -100,6 +101,8 @@ The Gold layer dimensional model and analytical marts answer core e-commerce ope
 │   └── tests/                  # 83 generic, schema, and custom singular invariant tests
 ├── docs/                       # Architectural documentation, ADRs, data dictionary, runbooks
 │   └── adr/                    # Architecture Decision Records (ADR-001 through ADR-006)
+├── extensions/                 # Custom JVM / Spark Catalyst Extensions (Scala 2.12)
+│   └── catalyst_optimizer/     # DynamicEcommercePartitionPruner AST optimization rule & sbt build
 ├── ingestion/                  # Ingestion scripts (kaggle_ingest.py with retry backoff & MinIO markers)
 ├── soda/                       # Soda Core quality checks for Raw, Bronze, and Silver layers
 ├── spark_jobs/                 # PySpark transformations and performance benchmarking suite
@@ -246,4 +249,4 @@ Detailed Architecture Decision Records are maintained in [`docs/adr/`](docs/adr/
 - *Implemented crash-safe incremental ingestion with SHA-256 deterministic deduplication and post-commit watermarking, validated via automated failure-injection matrices.*
 - *Engineered a YAML Data Contract engine with breaking-schema classification, automated dead-letter quarantine routing, and Slack diff alerting.*
 - *Integrated the OpenLineage standard with Marquez to capture end-to-end operational metadata, dataset facets, and schema evolution across Spark and dbt.*
-- *Authored a suite of 83 dbt tests covering SCD Type 2 dimensions, 30-minute idle sessionization, and cohort retention invariants.*
+- *Authored a suite of 84 dbt tests covering SCD Type 2 dimensions, 30-minute idle sessionization, and cohort retention invariants.*

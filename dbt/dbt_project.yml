@@ -19,7 +19,10 @@ models:
   ecommerce_lakehouse:
     staging:
       +materialized: view
+      +tags: ["staging", "s3_dependent"]
     intermediate:
       +materialized: view
+      +tags: ["intermediate", "s3_dependent"]
     marts:
       +materialized: table
+      +tags: ["marts", "offline_ready"]

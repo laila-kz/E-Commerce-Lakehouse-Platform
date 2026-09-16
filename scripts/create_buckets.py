@@ -5,12 +5,13 @@ import os
 import boto3
 from botocore.exceptions import ClientError
 
+
 def create_buckets():
     """Create all required buckets"""
     endpoint = os.environ.get("MINIO_ENDPOINT", "http://localhost:9000")
     access_key = os.environ.get("MINIO_ROOT_USER", "minioadmin")
     secret_key = os.environ.get("MINIO_ROOT_PASSWORD", "minioadmin")
-    
+
     client = boto3.client(
         's3',
         endpoint_url=endpoint,
@@ -19,9 +20,9 @@ def create_buckets():
         use_ssl=False,
         verify=False
     )
-    
+
     buckets = ["raw", "bronze", "silver", "gold", "reference", "logs"]
-    
+
     for bucket in buckets:
         try:
             client.create_bucket(Bucket=bucket)
@@ -32,6 +33,7 @@ def create_buckets():
                 print(f"[EXISTS] Bucket already exists: {bucket}")
             else:
                 print(f"[ERROR] Error creating {bucket}: {e}")
+
 
 if __name__ == "__main__":
     create_buckets()

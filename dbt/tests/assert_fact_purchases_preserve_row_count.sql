@@ -1,3 +1,5 @@
+{{ config(tags = ['s3_dependent', 'integration']) }}
+
 -- Singular test: Verify fact_purchases row count equals purchase events in int_events_enriched
 with purchase_count as (
 

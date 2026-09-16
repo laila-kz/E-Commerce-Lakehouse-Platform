@@ -1,15 +1,14 @@
 """
 Airflow Orchestration DAG for E-Commerce Data Lakehouse Pipeline
-Runs: Ingestion -> Bronze Transform -> Bronze Quality Gate -> Silver Transform -> Silver Quality Gate -> dbt (Staging -> Intermediate -> Core Dims/Facts -> Marts) -> dbt Tests
+Runs: Ingestion -> Bronze Transform -> Bronze Quality Gate -> Silver Transform
+      -> Silver Quality Gate -> dbt (Staging -> Core Dims/Facts -> Marts) -> dbt Tests
 """
 
-from datetime import datetime, timedelta
-import os
 import sys
+from datetime import datetime, timedelta
 
 from airflow import DAG
 from airflow.operators.bash import BashOperator
-from airflow.operators.empty import EmptyOperator
 
 # Import custom failure callback plugin
 sys.path.append('/opt/airflow/plugins')

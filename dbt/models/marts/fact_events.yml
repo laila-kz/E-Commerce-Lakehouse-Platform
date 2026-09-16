@@ -15,24 +15,21 @@ models:
         tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('dim_date')
-                field: date_key
+              to: ref('dim_date')
+              field: date_key
 
       - name: customer_key
         description: "FK to dim_customer"
         tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('dim_customer')
-                field: customer_key
+              to: ref('dim_customer')
+              field: customer_key
 
       - name: product_key
         description: "FK to dim_product (time-range resolved version)"
         tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('dim_product')
-                field: product_key
+              to: ref('dim_product')
+              field: product_key

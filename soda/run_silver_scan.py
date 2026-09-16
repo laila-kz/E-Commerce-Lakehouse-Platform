@@ -6,6 +6,7 @@ import sys
 from pyspark.sql import SparkSession
 from soda.scan import Scan
 
+
 def run_silver_scan():
     print("=" * 60)
     print("🔍 SODA CORE SILVER QUALITY SCAN")
@@ -60,6 +61,7 @@ def run_silver_scan():
 
     spark.stop()
     return exit_code
+
 
 if __name__ == "__main__":
     sys.exit(run_silver_scan())
