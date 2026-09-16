@@ -445,6 +445,59 @@
     }
     #dag-canvas:active { cursor: grabbing; }
 
+    /* ====== GRAPH EMPTY / ERROR STATE OVERLAY =========================== */
+    .graph-empty-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 40;
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(6px);
+      padding: 20px;
+    }
+    .empty-state-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px 36px;
+      text-align: center;
+      max-width: 460px;
+      box-shadow: 0 16px 36px rgba(0,0,0,0.35);
+    }
+    .empty-state-card h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 12px 0 6px;
+      color: var(--text);
+    }
+    .empty-state-card p {
+      font-size: 12.5px;
+      color: var(--text-dim);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+    .empty-state-card button {
+      margin: 0 auto;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 18px;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #0f172a;
+      font-weight: 600;
+      font-size: 12px;
+      border: none;
+      transition: all 0.2s;
+    }
+    .empty-state-card button:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
     /* Node Inspector Drawer */
     #node-drawer {
       position: absolute;
@@ -963,10 +1016,16 @@
       </button>
     </div>
 
-    <button class="load-data-btn" onclick="triggerLoadCustomGraph()">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      LOAD GRAPH_DATA.JSON
-    </button>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="load-data-btn" onclick="resetDefaultGraphState()" title="Reset to baseline medallion architecture DAG">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        RESET BASELINE
+      </button>
+      <button class="load-data-btn" onclick="initGraph()" title="Load full 110-node graph dataset">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        LOAD FULL DATASET
+      </button>
+    </div>
   </nav>
 
   <!-- ================= MAIN CONTAINER ================= -->
@@ -1025,6 +1084,19 @@
 
         <canvas id="dag-canvas"></canvas>
 
+        <!-- Empty / Error State Overlay -->
+        <div id="graph-empty-state" class="graph-empty-overlay" style="display:none;">
+          <div class="empty-state-card">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+            <h3>No Graph Nodes Visible</h3>
+            <p>The current layer filters, search query, or zoom coordinates returned no visible nodes.</p>
+            <button onclick="resetDefaultGraphState()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+              Reload Default Pipeline Graph
+            </button>
+          </div>
+        </div>
+
         <!-- Slide Drawer for Node Details -->
         <div id="node-drawer">
           <div class="drawer-header">
@@ -1058,7 +1130,7 @@
         </div>
 
         <div id="dag-footer">
-          GRAPH SOURCE &bull; BUILT-IN DOCS/GRAPH_DATA.JSON &bull; 110 NODES &bull; 129 EDGES &bull; DRAG TO PAN &bull; SCROLL TO ZOOM
+          GRAPH ACTIVE &bull; 19 NODES &bull; 25 EDGES &bull; DRAG TO PAN &bull; SCROLL TO ZOOM
         </div>
       </div>
     </div>
@@ -1976,6 +2048,35 @@
     // Initialize graphData with default graph right away
     let graphData = layoutGraph(buildDefaultGraph());
 
+    function updateDagFooter() {
+      const footer = document.getElementById('dag-footer');
+      if (footer && graphData) {
+        const nLen = graphData.nodes ? graphData.nodes.filter(n => activeLayerFilters.has(n.layer)).length : 0;
+        const totalNodes = graphData.nodes ? graphData.nodes.length : 0;
+        const lLen = graphData.links ? graphData.links.length : 0;
+        footer.innerHTML = `GRAPH ACTIVE &bull; <strong>${nLen} / ${totalNodes}</strong> NODES VISIBLE &bull; <strong>${lLen}</strong> EDGES &bull; DRAG TO PAN &bull; SCROLL TO ZOOM`;
+      }
+    }
+
+    function resetDefaultGraphState() {
+      activeLayerFilters = new Set(layerOrder);
+      document.querySelectorAll('.layer-chip').forEach(c => c.classList.add('active'));
+
+      const searchInput = document.getElementById('lineage-search');
+      if (searchInput) searchInput.value = '';
+
+      criticalPathOnly = false;
+      const cpBtn = document.getElementById('btn-critical-path');
+      if (cpBtn) cpBtn.classList.remove('active');
+
+      selectedNode = null;
+      hoveredNode = null;
+      camera = { x: 50, y: 50, zoom: 0.88 };
+
+      graphData = layoutGraph(buildDefaultGraph());
+      renderGraph();
+    }
+
     function initGraph() {
       fetch('graph_data.json')
         .then(res => {
@@ -1983,14 +2084,15 @@
           return res.json();
         })
         .then(json => {
-          if (json.nodes && json.nodes.length > 0) {
+          if (json && json.nodes && json.nodes.length > 0) {
             graphData = layoutGraph(json);
           } else {
             graphData = layoutGraph(buildDefaultGraph());
           }
           renderGraph();
         })
-        .catch(() => {
+        .catch(err => {
+          console.warn("Could not load external graph_data.json, using built-in baseline architecture DAG:", err);
           graphData = layoutGraph(buildDefaultGraph());
           renderGraph();
         });
@@ -2019,103 +2121,122 @@
       const h = canvas.height / dpr;
       if (w <= 0 || h <= 0) return;
 
-      ctx.clearRect(0, 0, w, h);
-      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      try {
+        ctx.clearRect(0, 0, w, h);
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
 
-      ctx.save();
-      ctx.translate(camera.x, camera.y);
-      ctx.scale(camera.zoom, camera.zoom);
+        ctx.save();
+        ctx.translate(camera.x, camera.y);
+        ctx.scale(camera.zoom, camera.zoom);
 
-      const nodeMap = {};
-      if (graphData && graphData.nodes) {
-        graphData.nodes.forEach(n => { if (n && n.id) nodeMap[n.id] = n; });
+        const nodeMap = {};
+        let visibleCount = 0;
+        if (graphData && graphData.nodes) {
+          graphData.nodes.forEach(n => {
+            if (n && n.id) {
+              nodeMap[n.id] = n;
+              if (activeLayerFilters.has(n.layer)) visibleCount++;
+            }
+          });
+        }
+
+        // Toggle Empty / Error State Overlay
+        const emptyOverlay = document.getElementById('graph-empty-state');
+        if (emptyOverlay) {
+          emptyOverlay.style.display = (visibleCount === 0) ? 'flex' : 'none';
+        }
+
+        // Draw Edges
+        if (graphData && graphData.links) {
+          graphData.links.forEach(l => {
+            const src = nodeMap[l.source];
+            const tgt = nodeMap[l.target];
+            if (!src || !tgt) return;
+            if (!activeLayerFilters.has(src.layer) || !activeLayerFilters.has(tgt.layer)) return;
+
+            const isHighlighted = (selectedNode && (selectedNode.id === src.id || selectedNode.id === tgt.id));
+            const isCritical = criticalPathOnly && (src.layer === 'source' || src.layer === 'bronze' || src.layer === 'silver' || src.layer === 'gold' || src.layer === 'marts');
+
+            ctx.beginPath();
+            const startX = src.x + src.width;
+            const startY = src.y + src.height / 2;
+            const endX = tgt.x;
+            const endY = tgt.y + tgt.height / 2;
+            const cp1x = startX + (endX - startX) * 0.5;
+            const cp2x = startX + (endX - startX) * 0.5;
+
+            ctx.moveTo(startX, startY);
+            ctx.bezierCurveTo(cp1x, startY, cp2x, endY, endX, endY);
+
+            if (isHighlighted) {
+              ctx.strokeStyle = isDark ? '#60a5fa' : '#3b82f6';
+              ctx.lineWidth = 2.5;
+            } else if (isCritical) {
+              ctx.strokeStyle = isDark ? 'rgba(96,165,250,0.5)' : 'rgba(59,130,246,0.45)';
+              ctx.lineWidth = 1.8;
+            } else {
+              ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)';
+              ctx.lineWidth = 1.2;
+            }
+            ctx.stroke();
+          });
+        }
+
+        // Draw Nodes
+        if (graphData && graphData.nodes) {
+          graphData.nodes.forEach(n => {
+            if (!n || !activeLayerFilters.has(n.layer)) return;
+
+            const isSelected = selectedNode && selectedNode.id === n.id;
+            const isHovered = hoveredNode && hoveredNode.id === n.id;
+            const color = getLayerColor(n.layer);
+
+            // Card Body
+            drawRoundedRect(ctx, n.x, n.y, n.width, n.height, 8);
+            if (isDark) {
+              ctx.fillStyle = isSelected ? '#1e3a5f' : (isHovered ? '#263348' : '#1e293b');
+              ctx.strokeStyle = isSelected ? '#60a5fa' : (isHovered ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.12)');
+            } else {
+              ctx.fillStyle = isSelected ? '#eff6ff' : (isHovered ? '#f8fafc' : '#ffffff');
+              ctx.strokeStyle = isSelected ? '#3b82f6' : (isHovered ? '#94a3b8' : '#e2e8f0');
+            }
+            ctx.fill();
+            ctx.lineWidth = isSelected ? 2 : 1;
+            ctx.stroke();
+
+            // Layer Color Indicator Left Bar
+            ctx.fillStyle = color;
+            ctx.fillRect(n.x, n.y + 4, 3.5, n.height - 8);
+
+            // Layer Label — Title Case, Inter
+            ctx.font = '600 9px Inter, sans-serif';
+            ctx.fillStyle = color;
+            const rawLayer = n.layer || 'node';
+            const layerLabel = rawLayer.charAt(0).toUpperCase() + rawLayer.slice(1);
+            ctx.fillText(layerLabel, n.x + 12, n.y + 16);
+
+            // Node Title
+            ctx.font = '600 11.5px Inter, sans-serif';
+            ctx.fillStyle = isDark ? '#f1f5f9' : '#0f172a';
+            const nameStr = n.name || n.id || 'Node';
+            const displayTitle = nameStr.length > 21 ? nameStr.slice(0, 19) + '..' : nameStr;
+            ctx.fillText(displayTitle, n.x + 12, n.y + 32);
+
+            // Format / Type Badge
+            ctx.font = '400 9px Inter, sans-serif';
+            ctx.fillStyle = isDark ? '#94a3b8' : '#64748b';
+            const formatStr = n.format || n.resource_type || 'Table';
+            ctx.fillText(formatStr, n.x + 12, n.y + 46);
+          });
+        }
+
+        ctx.restore();
+        updateDagFooter();
+      } catch (err) {
+        console.error("renderGraph caught rendering exception:", err);
+        const emptyOverlay = document.getElementById('graph-empty-state');
+        if (emptyOverlay) emptyOverlay.style.display = 'flex';
       }
-
-      // Draw Edges
-      if (graphData && graphData.links) {
-        graphData.links.forEach(l => {
-          const src = nodeMap[l.source];
-          const tgt = nodeMap[l.target];
-          if (!src || !tgt) return;
-          if (!activeLayerFilters.has(src.layer) || !activeLayerFilters.has(tgt.layer)) return;
-
-          const isHighlighted = (selectedNode && (selectedNode.id === src.id || selectedNode.id === tgt.id));
-          const isCritical = criticalPathOnly && (src.layer === 'source' || src.layer === 'bronze' || src.layer === 'silver' || src.layer === 'gold' || src.layer === 'marts');
-
-          ctx.beginPath();
-          const startX = src.x + src.width;
-          const startY = src.y + src.height / 2;
-          const endX = tgt.x;
-          const endY = tgt.y + tgt.height / 2;
-          const cp1x = startX + (endX - startX) * 0.5;
-          const cp2x = startX + (endX - startX) * 0.5;
-
-          ctx.moveTo(startX, startY);
-          ctx.bezierCurveTo(cp1x, startY, cp2x, endY, endX, endY);
-
-          if (isHighlighted) {
-            ctx.strokeStyle = isDark ? '#60a5fa' : '#3b82f6';
-            ctx.lineWidth = 2.5;
-          } else if (isCritical) {
-            ctx.strokeStyle = isDark ? 'rgba(96,165,250,0.5)' : 'rgba(59,130,246,0.45)';
-            ctx.lineWidth = 1.8;
-          } else {
-            ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)';
-            ctx.lineWidth = 1.2;
-          }
-          ctx.stroke();
-        });
-      }
-
-      // Draw Nodes
-      if (graphData && graphData.nodes) {
-        graphData.nodes.forEach(n => {
-          if (!n || !activeLayerFilters.has(n.layer)) return;
-
-          const isSelected = selectedNode && selectedNode.id === n.id;
-          const isHovered = hoveredNode && hoveredNode.id === n.id;
-          const color = getLayerColor(n.layer);
-
-          // Card Body
-          drawRoundedRect(ctx, n.x, n.y, n.width, n.height, 8);
-          if (isDark) {
-            ctx.fillStyle = isSelected ? '#1e3a5f' : (isHovered ? '#263348' : '#1e293b');
-            ctx.strokeStyle = isSelected ? '#60a5fa' : (isHovered ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.12)');
-          } else {
-            ctx.fillStyle = isSelected ? '#eff6ff' : (isHovered ? '#f8fafc' : '#ffffff');
-            ctx.strokeStyle = isSelected ? '#3b82f6' : (isHovered ? '#94a3b8' : '#e2e8f0');
-          }
-          ctx.fill();
-          ctx.lineWidth = isSelected ? 2 : 1;
-          ctx.stroke();
-
-          // Layer Color Indicator Left Bar
-          ctx.fillStyle = color;
-          ctx.fillRect(n.x, n.y + 4, 3.5, n.height - 8);
-
-          // Layer Label — Title Case, Inter
-          ctx.font = '600 9px Inter, sans-serif';
-          ctx.fillStyle = color;
-          const rawLayer = n.layer || 'node';
-          const layerLabel = rawLayer.charAt(0).toUpperCase() + rawLayer.slice(1);
-          ctx.fillText(layerLabel, n.x + 12, n.y + 16);
-
-          // Node Title
-          ctx.font = '600 11.5px Inter, sans-serif';
-          ctx.fillStyle = isDark ? '#f1f5f9' : '#0f172a';
-          const nameStr = n.name || n.id || 'Node';
-          const displayTitle = nameStr.length > 21 ? nameStr.slice(0, 19) + '..' : nameStr;
-          ctx.fillText(displayTitle, n.x + 12, n.y + 32);
-
-          // Format / Type Badge
-          ctx.font = '400 9px Inter, sans-serif';
-          ctx.fillStyle = isDark ? '#94a3b8' : '#64748b';
-          const formatStr = n.format || n.resource_type || 'Table';
-          ctx.fillText(formatStr, n.x + 12, n.y + 46);
-        });
-      }
-
-      ctx.restore();
     }
 
     function getNodeAt(x, y) {
@@ -2187,29 +2308,38 @@
     function toggleLayerFilter(layer, chipEl) {
       if (activeLayerFilters.has(layer)) {
         activeLayerFilters.delete(layer);
-        chipEl.classList.remove('active');
+        if (chipEl) chipEl.classList.remove('active');
       } else {
         activeLayerFilters.add(layer);
-        chipEl.classList.add('active');
+        if (chipEl) chipEl.classList.add('active');
       }
       renderGraph();
     }
 
     function toggleCriticalPath() {
       criticalPathOnly = !criticalPathOnly;
-      document.getElementById('btn-critical-path').classList.toggle('active', criticalPathOnly);
+      const btn = document.getElementById('btn-critical-path');
+      if (btn) btn.classList.toggle('active', criticalPathOnly);
       renderGraph();
     }
 
     function filterGraphSearch(query) {
-      if (!query) {
+      if (!query || !query.trim()) {
         selectedNode = null;
         renderGraph();
         return;
       }
-      const match = graphData.nodes.find(n => (n.name && n.name.toLowerCase().includes(query.toLowerCase())) || (n.id && n.id.toLowerCase().includes(query.toLowerCase())));
+      const q = query.toLowerCase().trim();
+      const match = graphData.nodes.find(n => 
+        (n.name && n.name.toLowerCase().includes(q)) || 
+        (n.id && n.id.toLowerCase().includes(q)) ||
+        (n.format && n.format.toLowerCase().includes(q))
+      );
       if (match) {
         focusNodeInGraph(match.id);
+      } else {
+        selectedNode = null;
+        renderGraph();
       }
     }
 
