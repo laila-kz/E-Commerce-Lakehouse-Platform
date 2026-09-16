@@ -2,742 +2,2152 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>Data Lakehouse Lineage &mdash; E-Commerce Medallion Architecture</title>
-  <meta name="description" content="2D DAG lineage: Source to Bronze to Silver to Gold to BI"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>E-Commerce Medallion Lakehouse — Governance & Lineage Portal</title>
+  <meta name="description" content="Interactive Governance, Lineage, Data Contracts, Quality Gates & Benchmarks Portal for E-Commerce Medallion Lakehouse"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
   <style>
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    :root{
-      --bg:#07090f; --surface:rgba(10,14,26,0.94); --border:rgba(255,255,255,0.07);
-      --text:#dde4f0; --muted:#4e5e76; --accent:#38bdf8;
-      --hdr:54px; --sb:258px;
-      --c-src:#f97316; --c-land:#facc15; --c-orch:#38bdf8;
-      --c-brnz:#cd7f32; --c-qual:#4ade80; --c-silv:#9ab0c8;
-      --c-gold:#ffd700; --c-bi:#a78bfa;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #07090e;
+      --bg-card: #0c1017;
+      --bg-card-hover: #121824;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-subtle: rgba(255, 255, 255, 0.04);
+      --text: #e2e8f0;
+      --text-muted: #64748b;
+      --text-dim: #94a3b8;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.2);
+      --emerald: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.2);
+      --amber: #f59e0b;
+      --amber-glow: rgba(245, 158, 11, 0.2);
+      --red: #ef4444;
+      --red-glow: rgba(239, 68, 68, 0.2);
+      --purple: #a855f7;
+      --orange: #f97316;
+      --yellow: #facc15;
+      --header-h: 58px;
+      --nav-h: 46px;
     }
-    html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);
-      font-family:Inter,sans-serif;color:var(--text);}
 
-    /* ====== HEADER ====================================================== */
-    #hdr{
-      position:fixed;top:0;left:0;right:0;height:var(--hdr);z-index:200;
-      background:rgba(7,9,15,0.97);border-bottom:1px solid var(--border);
-      backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
-      display:flex;align-items:center;padding:0 16px;gap:14px;
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
     }
-    .hdr-brand{display:flex;align-items:center;gap:9px;flex-shrink:0}
-    .live-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);
-      box-shadow:0 0 8px var(--accent);animation:blink 2.2s ease-in-out infinite}
-    @keyframes blink{0%,100%{opacity:1;box-shadow:0 0 7px var(--accent)}
-                     50%{opacity:.45;box-shadow:0 0 18px var(--accent)}}
-    .brand-name{font-size:14px;font-weight:700;white-space:nowrap}
-    .brand-sub{font-size:10.5px;color:var(--muted);margin-top:1px;white-space:nowrap}
-    .vsep{width:1px;height:26px;background:var(--border);flex-shrink:0}
 
-    /* Pipeline ribbon */
-    #ribbon{display:flex;align-items:center;gap:0;flex:1;overflow:hidden}
-    .rp{display:flex;align-items:center;gap:5px;padding:5px 9px;
-       border-radius:6px;font-size:11px;font-weight:600;letter-spacing:.04em;
-       white-space:nowrap;cursor:pointer;border:1px solid transparent;
-       transition:background .2s,border-color .2s}
-    .rp:hover{background:rgba(255,255,255,0.05)}
-    .rp.active{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.1)}
-    .rp-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;box-shadow:0 0 5px currentColor}
-    .rarr{font-size:11px;color:var(--muted);padding:0 1px;flex-shrink:0}
-
-    /* Right controls */
-    .hdr-right{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:auto}
-    .modeBtn{
-      display:flex;align-items:center;gap:5px;
-      background:rgba(255,255,255,0.04);border:1px solid var(--border);
-      border-radius:7px;padding:5px 12px;font-size:11.5px;font-weight:500;
-      color:var(--muted);cursor:pointer;transition:all .2s;font-family:Inter,sans-serif;
+    /* ====== TOP APP BAR ================================================= */
+    #top-bar {
+      height: var(--header-h);
+      background: rgba(7, 9, 14, 0.95);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
     }
-    .modeBtn.on{background:rgba(56,189,248,0.11);border-color:rgba(56,189,248,.28);color:var(--accent)}
-    .modeBtn:hover:not(.on){color:var(--text);border-color:rgba(255,255,255,.14)}
-    .iconBtn{
-      background:rgba(255,255,255,0.04);border:1px solid var(--border);
-      border-radius:7px;padding:5px 10px;font-size:14px;cursor:pointer;
-      transition:background .2s;color:var(--text);font-family:Inter,sans-serif;
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
-    .iconBtn:hover{background:rgba(255,255,255,0.09)}
-
-    /* ====== SIDEBAR ===================================================== */
-    #sb{
-      position:fixed;top:var(--hdr);left:0;bottom:0;width:var(--sb);z-index:100;
-      background:rgba(7,9,15,0.98);border-right:1px solid var(--border);
-      transform:translateX(0);transition:transform .28s cubic-bezier(.4,0,.2,1);
-      overflow-y:auto;display:flex;flex-direction:column;
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #0ea5e9, #6366f1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 16px rgba(14, 165, 233, 0.35);
     }
-    #sb.gone{transform:translateX(calc(-1 * var(--sb)))}
-    .sb-sec{padding:14px 16px;border-bottom:1px solid var(--border)}
-    .sb-lbl{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
-      color:var(--muted);margin-bottom:10px}
-
-    .leg{display:flex;align-items:flex-start;gap:9px;padding:6px 6px;
-         border-radius:7px;cursor:pointer;transition:background .15s}
-    .leg:hover{background:rgba(255,255,255,0.04)}
-    .leg.dim{opacity:.28}
-    .leg-sw{width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:3px}
-    .leg-name{font-size:12px;font-weight:600;line-height:1.2}
-    .leg-desc{font-size:10.5px;color:var(--muted);line-height:1.35;margin-top:1px}
-
-    .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    .stat-box{background:rgba(255,255,255,0.03);border:1px solid var(--border);
-      border-radius:8px;padding:10px;text-align:center}
-    .stat-n{font-size:21px;font-weight:700;font-family:'JetBrains Mono',monospace;
-      color:var(--accent);line-height:1}
-    .stat-ok{color:#4ade80}
-    .stat-l{font-size:9px;color:var(--muted);text-transform:uppercase;
-      letter-spacing:.05em;margin-top:3px}
-
-    .ctrl{display:flex;align-items:center;gap:8px;padding:3px 0;
-          font-size:11px;color:var(--muted)}
-    kbd{background:rgba(255,255,255,0.07);border:1px solid var(--border);
-      border-radius:4px;padding:1px 7px;font-size:10px;
-      font-family:'JetBrains Mono',monospace;color:var(--text)}
-
-    /* ====== GRAPH AREA ================================================== */
-    #gc{
-      position:fixed;top:var(--hdr);left:var(--sb);right:0;bottom:0;
-      transition:left .28s cubic-bezier(.4,0,.2,1);
+    .brand-icon svg { width: 18px; height: 18px; color: #fff; }
+    .brand-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: #f8fafc;
     }
-    #gc.full{left:0}
-
-    /* ====== TOOLTIP ===================================================== */
-    #tip{
-      position:fixed;z-index:500;pointer-events:none;
-      background:rgba(7,9,15,0.98);border:1px solid rgba(56,189,248,.22);
-      border-radius:10px;padding:11px 14px;max-width:265px;
-      font-size:12.5px;line-height:1.65;
-      box-shadow:0 8px 32px rgba(0,0,0,.75),0 0 0 1px rgba(56,189,248,.04);
-      opacity:0;transform:translateY(5px);transition:opacity .15s,transform .15s;
+    .brand-subtitle {
+      font-size: 9.5px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin-top: 2px;
     }
-    #tip.show{opacity:1;transform:translateY(0)}
 
-    /* ====== ORBIT BUTTON ================================================ */
-    #orbitBtn{
-      position:fixed;bottom:16px;right:16px;z-index:150;
-      background:rgba(10,14,26,0.92);border:1px solid var(--border);
-      border-radius:8px;padding:7px 14px;font-size:11.5px;
-      color:var(--accent);cursor:pointer;font-family:Inter,sans-serif;font-weight:500;
-      display:none;transition:background .2s;
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
-    #orbitBtn:hover{background:rgba(56,189,248,.1)}
-    #orbitBtn.paused{color:var(--muted)}
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 11px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-family: 'JetBrains Mono', monospace;
+      border: 1px solid;
+    }
+    .badge-green {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.15);
+    }
+    .badge-blue {
+      background: rgba(56, 189, 248, 0.1);
+      border-color: rgba(56, 189, 248, 0.3);
+      color: #38bdf8;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.15);
+    }
+    .badge-amber {
+      background: rgba(245, 158, 11, 0.1);
+      border-color: rgba(245, 158, 11, 0.3);
+      color: #fbbf24;
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.15);
+    }
+
+    .search-trigger {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 5px 12px;
+      font-size: 12px;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .search-trigger:hover {
+      background: rgba(255, 255, 255, 0.07);
+      border-color: rgba(255, 255, 255, 0.16);
+      color: var(--text);
+    }
+    .search-trigger kbd {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      padding: 2px 5px;
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+    }
+    .github-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .github-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+
+    /* ====== NAVIGATION SUB-BAR ========================================== */
+    #nav-bar {
+      height: var(--nav-h);
+      background: rgba(10, 13, 20, 0.9);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      position: fixed;
+      top: var(--header-h);
+      left: 0; right: 0;
+      z-index: 90;
+      backdrop-filter: blur(12px);
+    }
+
+    .nav-tabs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tab-btn {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 14px;
+      border-radius: 7px;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--text-dim);
+      background: transparent;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+    .tab-btn svg { width: 15px; height: 15px; stroke-width: 2; }
+    .tab-btn:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .tab-btn.active {
+      color: var(--accent);
+      background: rgba(56, 189, 248, 0.1);
+      border-color: rgba(56, 189, 248, 0.3);
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.15);
+      font-weight: 600;
+    }
+
+    .load-data-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .load-data-btn:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.16);
+    }
+
+    /* ====== MAIN VIEW CONTAINER ========================================= */
+    #main-container {
+      position: fixed;
+      top: calc(var(--header-h) + var(--nav-h));
+      bottom: 0;
+      left: 0;
+      right: 0;
+      overflow: hidden;
+    }
+
+    .tab-view {
+      display: none;
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+    }
+    .tab-view.active { display: block; }
+
+    /* ====== TAB 1: LINEAGE EXPLORER ===================================== */
+    #lineage-view {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #06080d;
+      background-image: 
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+
+    #lineage-controls {
+      position: absolute;
+      top: 14px;
+      left: 16px;
+      right: 16px;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .controls-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .controls-left, .controls-right, .filter-pills {
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .glass-input {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(12, 16, 25, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 12px;
+      backdrop-filter: blur(12px);
+      width: 240px;
+      transition: all 0.2s;
+    }
+    .glass-input:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+    }
+    .glass-input input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-size: 12px;
+      width: 100%;
+      font-family: inherit;
+    }
+    .glass-input svg { width: 14px; height: 14px; color: var(--text-muted); }
+
+    .action-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(12, 16, 25, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-dim);
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+      transition: all 0.2s;
+    }
+    .action-pill:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+    }
+    .action-pill.active {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .tool-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: rgba(12, 16, 25, 0.85);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-dim);
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+      transition: all 0.2s;
+    }
+    .tool-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+
+    .layer-chip {
+      padding: 4px 9px;
+      border-radius: 6px;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: rgba(12, 16, 25, 0.85);
+      backdrop-filter: blur(12px);
+      opacity: 0.85;
+    }
+    .layer-chip:hover, .layer-chip.active { opacity: 1; transform: translateY(-1px); }
+    .chip-source { border-color: rgba(249, 115, 22, 0.4); color: #f97316; }
+    .chip-landing { border-color: rgba(250, 204, 21, 0.4); color: #facc15; }
+    .chip-bronze { border-color: rgba(251, 146, 60, 0.4); color: #fb923c; }
+    .chip-quality { border-color: rgba(16, 185, 129, 0.4); color: #10b981; }
+    .chip-silver { border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; }
+    .chip-gold { border-color: rgba(245, 158, 11, 0.4); color: #f59e0b; }
+    .chip-marts { border-color: rgba(234, 88, 12, 0.4); color: #ea580c; }
+    .chip-bi { border-color: rgba(168, 85, 247, 0.4); color: #a855f7; }
+    .chip-orchestration { border-color: rgba(14, 165, 233, 0.4); color: #0ea5e9; }
+
+    #dag-canvas {
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+    }
+    #dag-canvas:active { cursor: grabbing; }
+
+    /* Node Inspector Drawer */
+    #node-drawer {
+      position: absolute;
+      top: 0;
+      right: -420px;
+      width: 400px;
+      height: 100%;
+      background: rgba(10, 14, 22, 0.96);
+      border-left: 1px solid var(--border);
+      backdrop-filter: blur(20px);
+      z-index: 60;
+      transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    #node-drawer.open { right: 0; }
+    .drawer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .drawer-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 18px;
+    }
+    .drawer-close:hover { color: #fff; }
+
+    .meta-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 14px;
+      font-size: 12px;
+    }
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .meta-row:last-child { border-bottom: none; }
+    .meta-label { color: var(--text-muted); }
+    .meta-val { font-family: 'JetBrains Mono', monospace; color: #f1f5f9; font-weight: 500; }
+
+    .code-block {
+      background: #06090e;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #93c5fd;
+      overflow-x: auto;
+      white-space: pre;
+      line-height: 1.5;
+    }
+
+    #dag-footer {
+      position: absolute;
+      bottom: 0;
+      left: 0; right: 0;
+      height: 28px;
+      background: rgba(7, 9, 14, 0.9);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      z-index: 40;
+    }
+
+    /* ====== TAB 2: ARCHITECTURE & DATA DICTIONARY ======================= */
+    .content-wrapper {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 24px 20px 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .medallion-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .medallion-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.2s;
+    }
+    .medallion-card:hover {
+      border-color: rgba(255, 255, 255, 0.16);
+      transform: translateY(-2px);
+    }
+    .medallion-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+    }
+    .card-raw::before { background: var(--orange); }
+    .card-bronze::before { background: var(--yellow); }
+    .card-silver::before { background: var(--accent); }
+    .card-gold::before { background: var(--amber); }
+    .card-bi::before { background: var(--purple); }
+
+    .card-tag {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+    .card-title { font-size: 14px; font-weight: 700; margin-bottom: 6px; color: #fff; }
+    .card-desc { font-size: 11.5px; color: var(--text-dim); line-height: 1.4; margin-bottom: 10px; }
+    .card-bullets { list-style: none; font-size: 11px; color: var(--text-muted); display: flex; flex-direction: column; gap: 4px; }
+    .card-bullets li::before { content: "• "; color: var(--accent); }
+
+    .data-table-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      text-align: left;
+    }
+    .data-table th {
+      background: rgba(255, 255, 255, 0.02);
+      padding: 11px 16px;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-dim);
+    }
+    .data-table tr:hover td { background: rgba(255, 255, 255, 0.02); }
+    .data-table tr:last-child td { border-bottom: none; }
+    .code-cell {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      color: var(--accent);
+    }
+
+    /* ====== TAB 3: CONTRACTS & QUALITY (Exact Match to Screenshot 1) ====== */
+    .diff-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+    }
+    .diff-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .diff-toggle-group {
+      display: flex;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
+    }
+    .diff-toggle-btn {
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .diff-toggle-btn.active {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+    .diff-toggle-btn.active.breaking {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+
+    .diff-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .diff-col {
+      background: #05070c;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      line-height: 1.55;
+      position: relative;
+    }
+    .diff-col-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text-muted);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .copy-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-dim);
+      font-size: 9.5px;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 2px 7px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .copy-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+
+    .yaml-comment { color: #475569; }
+    .yaml-key { color: #60a5fa; }
+    .yaml-val { color: #38bdf8; }
+    .yaml-bool { color: #f472b6; }
+    .yaml-added { color: #34d399; background: rgba(16, 185, 129, 0.1); display: block; border-left: 2px solid #10b981; padding-left: 4px; }
+    .yaml-removed { color: #f87171; background: rgba(239, 68, 68, 0.12); display: block; border-left: 2px solid #ef4444; padding-left: 4px; }
+    .yaml-changed { color: #f87171; background: rgba(239, 68, 68, 0.12); display: block; border-left: 2px solid #ef4444; padding-left: 4px; }
+
+    .diff-badges-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .rule-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .rule-breaking {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #f87171;
+    }
+    .rule-compatible {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+    }
+
+    /* ====== TAB 4: SPARK BENCHMARKS ===================================== */
+    .benchmark-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 16px;
+    }
+    .bench-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+    }
+    .bench-bar-group {
+      margin: 14px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .bar-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      margin-bottom: 2px;
+    }
+    .bar-track {
+      height: 22px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      padding-left: 10px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      color: #fff;
+      transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .fill-red { background: linear-gradient(90deg, #ef4444, #f97316); }
+    .fill-green { background: linear-gradient(90deg, #10b981, #06b6d4); }
+    .fill-blue { background: linear-gradient(90deg, #3b82f6, #6366f1); }
+
+    /* ====== TAB 5: RUNBOOK & ADRS ======================================= */
+    .cmd-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .cmd-info { display: flex; flex-direction: column; gap: 3px; }
+    .cmd-title { font-size: 13px; font-weight: 600; color: #f8fafc; }
+    .cmd-desc { font-size: 11.5px; color: var(--text-muted); }
+    .cmd-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--accent);
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .cmd-code:hover {
+      background: rgba(56, 189, 248, 0.16);
+      border-color: var(--accent);
+    }
+
+    /* ====== SEARCH MODAL ================================================ */
+    #search-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      z-index: 200;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 15vh;
+    }
+    #search-modal.open { display: flex; }
+    .modal-box {
+      width: 540px;
+      background: #0b0f19;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+      overflow: hidden;
+    }
+    .modal-input {
+      width: 100%;
+      padding: 16px 20px;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-size: 14px;
+      color: #fff;
+      border-bottom: 1px solid var(--border);
+      font-family: inherit;
+    }
+    .modal-results {
+      max-height: 320px;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    .modal-item {
+      padding: 10px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12.5px;
+      color: var(--text-dim);
+    }
+    .modal-item:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.22); }
   </style>
 </head>
 <body>
 
-<!-- ===== HEADER ========================================================= -->
-<header id="hdr">
-  <div class="hdr-brand">
-    <div class="live-dot"></div>
-    <div>
-      <div class="brand-name">Lakehouse Lineage</div>
-      <div class="brand-sub">E-Commerce Medallion Architecture</div>
+  <!-- ================= TOP HEADER ================= -->
+  <header id="top-bar">
+    <div class="brand-section">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title">E-Commerce Medallion Lakehouse</div>
+        <div class="brand-subtitle">PYSPARK &bull; DELTA &bull; MINIO &bull; DUCKDB &bull; DBT &bull; AIRFLOW</div>
+      </div>
     </div>
-  </div>
-  <div class="vsep"></div>
 
-  <nav id="ribbon">
-    <div class="rp" style="color:var(--c-src)"  data-layer="source">
-      <div class="rp-dot" style="background:var(--c-src);color:var(--c-src)"></div>Raw CSV
-    </div><div class="rarr">&#8594;</div>
-    <div class="rp" style="color:var(--c-brnz)" data-layer="bronze">
-      <div class="rp-dot" style="background:var(--c-brnz);color:var(--c-brnz)"></div>Bronze
-    </div><div class="rarr">&#8594;</div>
-    <div class="rp" style="color:var(--c-silv)" data-layer="silver">
-      <div class="rp-dot" style="background:var(--c-silv);color:var(--c-silv)"></div>Silver
-    </div><div class="rarr">&#8594;</div>
-    <div class="rp" style="color:var(--c-gold)" data-layer="gold">
-      <div class="rp-dot" style="background:var(--c-gold);color:var(--c-gold)"></div>Gold / dbt
-    </div><div class="rarr">&#8594;</div>
-    <div class="rp" style="color:var(--c-bi)"   data-layer="bi">
-      <div class="rp-dot" style="background:var(--c-bi);color:var(--c-bi)"></div>BI
+    <div class="top-actions">
+      <div class="status-badge badge-green">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        Pipeline Healthy
+      </div>
+      <div class="status-badge badge-blue">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        57/57 Tests Passed
+      </div>
+      <div class="status-badge badge-amber">
+        0.00% Drift
+      </div>
+
+      <div class="search-trigger" onclick="openSearch()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span>Quick search</span>
+        <kbd>&cmd;K</kbd>
+      </div>
+
+      <a href="https://github.com/laila-kz/DataLakeHouse_project2-" target="_blank" class="github-btn" title="View GitHub Repository">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+        </svg>
+      </a>
     </div>
+  </header>
+
+  <!-- ================= SUB NAVIGATION ================= -->
+  <nav id="nav-bar">
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('lineage')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        Lineage Explorer
+      </button>
+      <button class="tab-btn" onclick="switchTab('arch')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Architecture &amp; Dictionary
+      </button>
+      <button class="tab-btn" onclick="switchTab('contracts')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Contracts &amp; Quality
+      </button>
+      <button class="tab-btn" onclick="switchTab('benchmarks')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Spark Benchmarks
+      </button>
+      <button class="tab-btn" onclick="switchTab('runbook')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        Runbook &amp; ADRs
+      </button>
+    </div>
+
+    <button class="load-data-btn" onclick="triggerLoadCustomGraph()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      LOAD GRAPH_DATA.JSON
+    </button>
   </nav>
 
-  <div class="hdr-right">
-    <button class="modeBtn on"  id="btn2d">&#9633;&nbsp; 2D DAG</button>
-    <button class="modeBtn"     id="btn3d">&#9671;&nbsp; 3D Graph</button>
-    <div class="vsep"></div>
-    <button class="iconBtn" id="sbToggle" title="Toggle sidebar">&#9776;</button>
+  <!-- ================= MAIN CONTAINER ================= -->
+  <main id="main-container">
+
+    <!-- ──────────────── TAB 1: LINEAGE EXPLORER ──────────────── -->
+    <div id="tab-lineage" class="tab-view active">
+      <div id="lineage-view">
+        <div id="lineage-controls">
+          <div class="controls-row">
+            <div class="controls-left">
+              <div class="glass-input">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="lineage-search" placeholder="Search table or column.." oninput="filterGraphSearch(this.value)"/>
+              </div>
+
+              <button class="action-pill" id="btn-critical-path" onclick="toggleCriticalPath()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                ISOLATE CRITICAL PATH
+              </button>
+            </div>
+
+            <div class="controls-right">
+              <button class="tool-btn" title="Zoom In" onclick="zoomGraph(1.2)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+              </button>
+              <button class="tool-btn" title="Zoom Out" onclick="zoomGraph(0.8)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+              </button>
+              <button class="tool-btn" title="Reset Layout" onclick="resetGraphView()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+              </button>
+              <button class="tool-btn" title="Fullscreen" onclick="toggleFullscreen()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+              </button>
+              <button class="tool-btn" title="Export PNG" onclick="exportGraphImage()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="controls-row">
+            <div class="filter-pills">
+              <span class="layer-chip chip-source active" onclick="toggleLayerFilter('source', this)">SOURCE</span>
+              <span class="layer-chip chip-landing active" onclick="toggleLayerFilter('landing', this)">LANDING</span>
+              <span class="layer-chip chip-bronze active" onclick="toggleLayerFilter('bronze', this)">BRONZE</span>
+              <span class="layer-chip chip-quality active" onclick="toggleLayerFilter('quality', this)">QUALITY GATES</span>
+              <span class="layer-chip chip-silver active" onclick="toggleLayerFilter('silver', this)">SILVER</span>
+              <span class="layer-chip chip-gold active" onclick="toggleLayerFilter('gold', this)">GOLD</span>
+              <span class="layer-chip chip-marts active" onclick="toggleLayerFilter('marts', this)">MARTS</span>
+              <span class="layer-chip chip-bi active" onclick="toggleLayerFilter('bi', this)">BI</span>
+              <span class="layer-chip chip-orchestration active" onclick="toggleLayerFilter('orchestration', this)">ORCHESTRATION</span>
+            </div>
+          </div>
+        </div>
+
+        <canvas id="dag-canvas"></canvas>
+
+        <!-- Slide Drawer for Node Details -->
+        <div id="node-drawer">
+          <div class="drawer-header">
+            <span id="drawer-node-layer" class="status-badge badge-blue">LAYER</span>
+            <button class="drawer-close" onclick="closeDrawer()">&times;</button>
+          </div>
+          <h3 id="drawer-node-name" style="font-size:18px; margin-bottom: 8px; color:#fff;">Node Name</h3>
+          <p id="drawer-node-desc" style="font-size:12px; color:var(--text-dim); margin-bottom:16px;">Description</p>
+
+          <div class="meta-box">
+            <div class="meta-row">
+              <span class="meta-label">Resource Type</span>
+              <span class="meta-val" id="drawer-resource-type">dbt_model</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Storage Format</span>
+              <span class="meta-val" id="drawer-format">DuckDB Table</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Primary Key</span>
+              <span class="meta-val" id="drawer-pk">event_key</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Partitioning</span>
+              <span class="meta-val" id="drawer-part">event_date</span>
+            </div>
+          </div>
+
+          <div style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:6px; letter-spacing:0.06em;">SQL / TRANSFORMATION LOGIC</div>
+          <div class="code-block" id="drawer-code">SELECT * FROM source...</div>
+        </div>
+
+        <div id="dag-footer">
+          GRAPH SOURCE &bull; BUILT-IN DOCS/GRAPH_DATA.JSON &bull; 110 NODES &bull; 129 EDGES &bull; DRAG TO PAN &bull; SCROLL TO ZOOM
+        </div>
+      </div>
+    </div>
+
+    <!-- ──────────────── TAB 2: ARCHITECTURE & DATA DICTIONARY ──────────────── -->
+    <div id="tab-arch" class="tab-view">
+      <div class="content-wrapper">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Medallion Data Architecture Multi-Tier Pipeline</h2>
+            <p class="section-subtitle">Automated staging, transformation, SCD Type 2 dimension validity windows &amp; business marts</p>
+          </div>
+        </div>
+
+        <div class="medallion-grid">
+          <div class="medallion-card card-raw">
+            <div class="card-tag" style="color:var(--orange)">TIER 1 &bull; LANDING</div>
+            <div class="card-title">MinIO Raw S3</div>
+            <div class="card-desc">Immutable landing zone storing multi-part raw CSV ingestion partitioned by date.</div>
+            <ul class="card-bullets">
+              <li>Partitioned: <code>year/month/day</code></li>
+              <li>Boto3 concurrent uploader</li>
+              <li>Audit logging &amp; quarantine</li>
+            </ul>
+          </div>
+
+          <div class="medallion-card card-bronze">
+            <div class="card-tag" style="color:var(--yellow)">TIER 2 &bull; BRONZE</div>
+            <div class="card-title">Delta Lake Ingestion</div>
+            <div class="card-desc">Append-only raw events with strictly enforced schema and dead-letter quarantine routing.</div>
+            <ul class="card-bullets">
+              <li>ACID transaction log</li>
+              <li>Permissive parser mode</li>
+              <li>Soda Core existence checks</li>
+            </ul>
+          </div>
+
+          <div class="medallion-card card-silver">
+            <div class="card-tag" style="color:var(--accent)">TIER 3 &bull; SILVER</div>
+            <div class="card-title">Delta Lake MERGE</div>
+            <div class="card-desc">Incremental merge with watermark lookback, SHA-256 deduplication, and category parsing.</div>
+            <ul class="card-bullets">
+              <li>SHA-256 event fingerprinting</li>
+              <li>Category hierarchy (L1/L2/L3)</li>
+              <li>Sub-second row lookup</li>
+            </ul>
+          </div>
+
+          <div class="medallion-card card-gold">
+            <div class="card-tag" style="color:var(--amber)">TIER 4 &bull; GOLD</div>
+            <div class="card-title">dbt &amp; DuckDB Warehouse</div>
+            <div class="card-desc">Dimensional star schema modeling, SCD Type 2 product validity, and 30-min sessionization.</div>
+            <ul class="card-bullets">
+              <li><code>dim_customer</code>, <code>dim_date</code>, <code>dim_product</code></li>
+              <li><code>fact_events</code> &amp; <code>fact_purchases</code></li>
+              <li>57+ dbt invariant tests passed</li>
+            </ul>
+          </div>
+
+          <div class="medallion-card card-bi">
+            <div class="card-tag" style="color:var(--purple)">TIER 5 &bull; BI MARTS</div>
+            <div class="card-title">Executive Analytics</div>
+            <div class="card-desc">Pre-aggregated dimensional marts driving daily revenue summaries, retention, and Metabase dashboards.</div>
+            <ul class="card-bullets">
+              <li><code>mart_daily_summary</code></li>
+              <li><code>mart_customer_retention</code></li>
+              <li><code>mart_category_performance</code></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="section-header" style="margin-top: 20px;">
+          <div>
+            <h2 class="section-title">Interactive Data Dictionary &amp; Schema Registry</h2>
+            <p class="section-subtitle">Catalog of all dimensional models, primary keys, nullability, and business grain definitions</p>
+          </div>
+        </div>
+
+        <div class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>TABLE / MODEL</th>
+                <th>LAYER</th>
+                <th>PRIMARY KEY</th>
+                <th>BUSINESS GRAIN</th>
+                <th>KEY METRICS / COLUMNS</th>
+                <th>SLA / RETENTION</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="code-cell">dim_customer</td>
+                <td><span class="status-badge badge-blue">Gold Dim</span></td>
+                <td><code>customer_key</code></td>
+                <td>1 row per unique user ID</td>
+                <td><code>first_seen_at, first_seen_date_key, total_events</code></td>
+                <td>Daily Incremental</td>
+              </tr>
+              <tr>
+                <td class="code-cell">dim_product</td>
+                <td><span class="status-badge badge-blue">Gold Dim</span></td>
+                <td><code>product_key</code></td>
+                <td>1 row per product price version (SCD 2)</td>
+                <td><code>product_id, price, valid_from, valid_to, is_current</code></td>
+                <td>Full Refresh</td>
+              </tr>
+              <tr>
+                <td class="code-cell">fact_events</td>
+                <td><span class="status-badge badge-amber">Gold Fact</span></td>
+                <td><code>event_key</code></td>
+                <td>1 row per clickstream activity</td>
+                <td><code>customer_key, product_key, date_key, event_type, session_id</code></td>
+                <td>Daily Partitioned</td>
+              </tr>
+              <tr>
+                <td class="code-cell">fact_purchases</td>
+                <td><span class="status-badge badge-amber">Gold Fact</span></td>
+                <td><code>purchase_key</code></td>
+                <td>1 row per monetary purchase transaction</td>
+                <td><code>revenue, customer_key, product_key, date_key, user_session</code></td>
+                <td>Real-time Ingestion</td>
+              </tr>
+              <tr>
+                <td class="code-cell">mart_daily_summary</td>
+                <td><span class="status-badge badge-green">Gold Mart</span></td>
+                <td><code>date + category_l1</code></td>
+                <td>1 row per calendar day and top category</td>
+                <td><code>total_revenue, total_events, total_purchases, active_users</code></td>
+                <td>$0.00 Drift Verified</td>
+              </tr>
+              <tr>
+                <td class="code-cell">mart_customer_retention</td>
+                <td><span class="status-badge badge-green">Gold Mart</span></td>
+                <td><code>cohort_month + months_since</code></td>
+                <td>1 row per monthly cohort and age month</td>
+                <td><code>cohort_size, retained_count, retention_rate</code></td>
+                <td>Monotonic Non-Increasing</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ──────────────── TAB 3: CONTRACTS & QUALITY (Screenshots 1 & 2 Match) ──────────────── -->
+    <div id="tab-contracts" class="tab-view">
+      <div class="content-wrapper">
+        
+        <!-- Contract Evolution Section -->
+        <div class="diff-panel">
+          <div class="diff-header">
+            <div>
+              <h2 class="section-title">Contract Evolution &amp; Breaking Change Analyzer</h2>
+              <p class="section-subtitle">Automated backward/forward compatibility diffing across versioned YAML data contracts</p>
+            </div>
+            <div class="diff-toggle-group">
+              <button class="diff-toggle-btn" id="btn-diff-comp" onclick="setDiffMode('compatible')">V2.0.0 COMPATIBLE</button>
+              <button class="diff-toggle-btn active breaking" id="btn-diff-break" onclick="setDiffMode('breaking')">V2.0.0 BREAKING</button>
+            </div>
+          </div>
+
+          <div class="diff-grid">
+            <!-- Left: Current v1.0.0 -->
+            <div class="diff-col">
+              <div class="diff-col-header">
+                <span>V1.0.0 &bull; CURRENT</span>
+                <button class="copy-btn" onclick="copySnippet('v1-code')">COPY</button>
+              </div>
+              <div id="v1-code">
+<span class="yaml-comment"># contracts/events/v1.0.0.yml</span>
+<span class="yaml-key">version:</span> <span class="yaml-val">1.0.0</span>
+<span class="yaml-key">dataset:</span> <span class="yaml-val">bronze_events</span>
+<span class="yaml-key">owner:</span> <span class="yaml-val">data-platform@shop.io</span>
+<span class="yaml-key">columns:</span>
+  - <span class="yaml-key">name:</span> <span class="yaml-val">event_id</span>
+    <span class="yaml-key">type:</span> <span class="yaml-val">string</span>
+    <span class="yaml-key">nullable:</span> <span class="yaml-bool">false</span>
+  - <span class="yaml-key">name:</span> <span class="yaml-val">event_time</span>
+    <span class="yaml-key">type:</span> <span class="yaml-val">timestamp</span>
+    <span class="yaml-key">nullable:</span> <span class="yaml-bool">false</span>
+  - <span class="yaml-key">name:</span> <span class="yaml-val">event_type</span>
+    <span class="yaml-key">type:</span> <span class="yaml-val">string</span>
+    <span class="yaml-key">nullable:</span> <span class="yaml-bool">false</span>
+    <span class="yaml-key">accepted_values:</span> [<span class="yaml-val">view</span>, <span class="yaml-val">cart</span>, <span class="yaml-val">purchase</span>]
+  - <span class="yaml-key">name:</span> <span class="yaml-val">price</span>
+    <span class="yaml-key">type:</span> <span class="yaml-val">double</span>
+    <span class="yaml-key">nullable:</span> <span class="yaml-bool">true</span>
+  - <span class="yaml-key">name:</span> <span class="yaml-val">user_session</span>
+    <span class="yaml-key">type:</span> <span class="yaml-val">string</span>
+    <span class="yaml-key">nullable:</span> <span class="yaml-bool">true</span>
+<span class="yaml-key">quarantine:</span>
+  <span class="yaml-key">strategy:</span> <span class="yaml-val">dead_letter</span>
+  <span class="yaml-key">retention_days:</span> <span class="yaml-val">30</span>
+              </div>
+            </div>
+
+            <!-- Right: Dynamic Diff View -->
+            <div class="diff-col" id="diff-right-col">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <div class="diff-badges-row" id="diff-badges-row">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+
+        <!-- Dead Letter Quarantine Inspector -->
+        <div class="section-header" style="margin-top: 10px;">
+          <div>
+            <h2 class="section-title">Dead-Letter Quarantine Inspector</h2>
+            <p class="section-subtitle">Real-time isolation of contract-violating batches with audit metadata payloads</p>
+          </div>
+        </div>
+
+        <div class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>BATCH</th>
+                <th>ROWS</th>
+                <th>VIOLATION</th>
+                <th>COLUMN</th>
+                <th>REASON</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="code-cell">b-20241102-0143</td>
+                <td><span style="color:var(--yellow);font-weight:700;">412</span></td>
+                <td><span style="color:var(--red);font-weight:700;">TYPE_CHANGED</span></td>
+                <td><span style="color:var(--accent);">price</span></td>
+                <td><code>'n/a' not castable to decimal(12,2)</code></td>
+              </tr>
+              <tr>
+                <td class="code-cell">b-20241102-0143</td>
+                <td><span style="color:var(--yellow);font-weight:700;">318</span></td>
+                <td><span style="color:var(--red);font-weight:700;">NULLABILITY_TIGHTENED</span></td>
+                <td><span style="color:var(--accent);">price</span></td>
+                <td><code>null value rejected under v2 contract</code></td>
+              </tr>
+              <tr>
+                <td class="code-cell">b-20241101-2207</td>
+                <td><span style="color:var(--yellow);font-weight:700;">289</span></td>
+                <td><span style="color:var(--red);font-weight:700;">COLUMN_DROPPED</span></td>
+                <td><span style="color:var(--accent);">user_session</span></td>
+                <td><code>column absent in upstream payload</code></td>
+              </tr>
+              <tr>
+                <td class="code-cell">b-20241101-1112</td>
+                <td><span style="color:var(--yellow);font-weight:700;">165</span></td>
+                <td><span style="color:var(--red);font-weight:700;">INVALID_VALUE</span></td>
+                <td><span style="color:var(--accent);">event_type</span></td>
+                <td><code>'wishlist' not in accepted_values</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Soda Core Quality Gates -->
+        <div class="section-header" style="margin-top: 10px;">
+          <div>
+            <h2 class="section-title">Soda Core Quality Gates <span class="status-badge badge-green" style="margin-left:8px;">11/11 PASSED</span></h2>
+            <p class="section-subtitle">Automated pre-flight &amp; post-flight assertions guarding data integrity</p>
+          </div>
+        </div>
+
+        <div class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>LAYER</th>
+                <th>DATASET</th>
+                <th>CHECK</th>
+                <th>VALUE</th>
+                <th>DURATION</th>
+                <th>STATUS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="status-badge badge-amber">BRONZE</span></td>
+                <td class="code-cell">bronze_events</td>
+                <td><span style="color:var(--accent);">row_count &gt; 0</span></td>
+                <td><span style="color:var(--yellow);font-weight:700;">2,410,884</span></td>
+                <td>412 ms</td>
+                <td><span class="status-badge badge-green">PASS</span></td>
+              </tr>
+              <tr>
+                <td><span class="status-badge badge-amber">BRONZE</span></td>
+                <td class="code-cell">bronze_events</td>
+                <td><span style="color:var(--accent);">missing_count(event_id) = 0</span></td>
+                <td><span style="color:var(--yellow);font-weight:700;">0</span></td>
+                <td>688 ms</td>
+                <td><span class="status-badge badge-green">PASS</span></td>
+              </tr>
+              <tr>
+                <td><span class="status-badge badge-blue">SILVER</span></td>
+                <td class="code-cell">silver_events</td>
+                <td><span style="color:var(--accent);">duplicate_count(event_key) = 0</span></td>
+                <td><span style="color:var(--yellow);font-weight:700;">0</span></td>
+                <td>524 ms</td>
+                <td><span class="status-badge badge-green">PASS</span></td>
+              </tr>
+              <tr>
+                <td><span class="status-badge badge-blue">SILVER</span></td>
+                <td class="code-cell">silver_events</td>
+                <td><span style="color:var(--accent);">invalid_count(price) = 0 (&gt;= 0)</span></td>
+                <td><span style="color:var(--yellow);font-weight:700;">0</span></td>
+                <td>310 ms</td>
+                <td><span class="status-badge badge-green">PASS</span></td>
+              </tr>
+              <tr>
+                <td><span class="status-badge badge-blue">SILVER</span></td>
+                <td class="code-cell">silver_events</td>
+                <td><span style="color:var(--accent);">freshness(event_time) &lt; 24h</span></td>
+                <td><span style="color:var(--yellow);font-weight:700;">0.8h</span></td>
+                <td>195 ms</td>
+                <td><span class="status-badge badge-green">PASS</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ──────────────── TAB 4: SPARK BENCHMARKS ──────────────── -->
+    <div id="tab-benchmarks" class="tab-view">
+      <div class="content-wrapper">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Spark &amp; Delta Lake Engine Optimization Benchmarks</h2>
+            <p class="section-subtitle">Quantified runtime gains across Join Strategies, Shuffle Partition Sizing &amp; File Compaction</p>
+          </div>
+          <div class="status-badge badge-blue">LIVE PROFILE VERIFIED</div>
+        </div>
+
+        <div class="benchmark-grid">
+          <!-- Card 1: Join Strategy -->
+          <div class="bench-card">
+            <div class="section-title" style="font-size:14px;">Suite 1: Join Strategy Optimization</div>
+            <p class="section-subtitle">Fact-to-Dimension joins with automatic Broadcast Hash threshold</p>
+
+            <div class="bench-bar-group">
+              <div class="bar-row">
+                <span>Sort-Merge Join (Standard Shuffle)</span>
+                <span class="code-cell" style="color:#f87171;">12,450 ms</span>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill fill-red" style="width: 100%;">100% baseline</div>
+              </div>
+            </div>
+
+            <div class="bench-bar-group">
+              <div class="bar-row">
+                <span>Broadcast Hash Join (Tuned &bull; Zero Shuffle)</span>
+                <span class="code-cell" style="color:#34d399;">1,820 ms</span>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill fill-green" style="width: 14.6%;">85.4% Speedup</div>
+              </div>
+            </div>
+            <p style="font-size:11px;color:var(--text-muted);margin-top:10px;">Eliminated full cluster network shuffle stage for 5,000 product dimensions.</p>
+          </div>
+
+          <!-- Card 2: Partition Tuning -->
+          <div class="bench-card">
+            <div class="section-title" style="font-size:14px;">Suite 2: Shuffle Partition Sizing</div>
+            <p class="section-subtitle">Reducing task scheduling overhead by sizing partitions to cluster core count</p>
+
+            <div class="bench-bar-group">
+              <div class="bar-row">
+                <span>Default 200 Partitions (Over-partitioned)</span>
+                <span class="code-cell" style="color:#f87171;">8,900 ms</span>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill fill-red" style="width: 100%;">100% baseline</div>
+              </div>
+            </div>
+
+            <div class="bench-bar-group">
+              <div class="bar-row">
+                <span>Tuned 8 Partitions (Core Aligned)</span>
+                <span class="code-cell" style="color:#34d399;">1,650 ms</span>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill fill-green" style="width: 18.5%;">81.5% Speedup</div>
+              </div>
+            </div>
+            <p style="font-size:11px;color:var(--text-muted);margin-top:10px;">Drastically cut JVM task serialization and state tracking overhead.</p>
+          </div>
+
+          <!-- Card 3: Delta Compaction -->
+          <div class="bench-card">
+            <div class="section-title" style="font-size:14px;">Suite 3: Storage Compaction (OPTIMIZE &amp; Z-ORDER)</div>
+            <p class="section-subtitle">Bin-packing small files and multidimensional data clustering</p>
+
+            <div class="bench-bar-group">
+              <div class="bar-row">
+                <span>Uncompacted Small Parquet Files (120 files)</span>
+                <span class="code-cell" style="color:#f87171;">4,820 ms</span>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill fill-red" style="width: 100%;">100% baseline</div>
+              </div>
+            </div>
+
+            <div class="bench-bar-group">
+              <div class="bar-row">
+                <span>Delta Compacted + Z-ORDER (user_id, event_time)</span>
+                <span class="code-cell" style="color:#34d399;">1,270 ms</span>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill fill-green" style="width: 26.3%;">3.8x Query Speedup</div>
+              </div>
+            </div>
+            <p style="font-size:11px;color:var(--text-muted);margin-top:10px;">Parquet footer reading overhead minimized via Delta transaction log pruning.</p>
+          </div>
+
+          <!-- Card 4: Scala Catalyst Extension -->
+          <div class="bench-card">
+            <div class="section-title" style="font-size:14px;">Suite 4: Scala Catalyst Optimizer Extension</div>
+            <p class="section-subtitle">Custom physical rule injection via <code>EcommerceSparkExtensions</code></p>
+
+            <div class="bench-bar-group">
+              <div class="bar-row">
+                <span>Standard Spark Catalyst Plan</span>
+                <span class="code-cell" style="color:#f87171;">3,410 ms</span>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill fill-red" style="width: 100%;">100% baseline</div>
+              </div>
+            </div>
+
+            <div class="bench-bar-group">
+              <div class="bar-row">
+                <span>With Dynamic Partition Pruner Extension</span>
+                <span class="code-cell" style="color:#34d399;">920 ms</span>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill fill-green" style="width: 27%;">73.0% Speedup</div>
+              </div>
+            </div>
+            <p style="font-size:11px;color:var(--text-muted);margin-top:10px;">Evaluates date predicates early during query compilation.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ──────────────── TAB 5: RUNBOOK & ADRS ──────────────── -->
+    <div id="tab-runbook" class="tab-view">
+      <div class="content-wrapper">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Automated Command Runbook</h2>
+            <p class="section-subtitle">Single-click copyable commands to build, test, and execute the entire platform</p>
+          </div>
+        </div>
+
+        <div class="cmd-card">
+          <div class="cmd-info">
+            <div class="cmd-title">Full Platform Quality &amp; Governance Verification</div>
+            <div class="cmd-desc">Executes contract validation, breaking schema diff, dbt 57-test suite, revenue reconciliation, and Spark benchmarks.</div>
+          </div>
+          <button class="cmd-code" onclick="copyText('make verify-all')">
+            <span>make verify-all</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+
+        <div class="cmd-card">
+          <div class="cmd-info">
+            <div class="cmd-title">Execute Full dbt Dimensional Modeling &amp; Marts Tests</div>
+            <div class="cmd-desc">Validates unique keys, relationships, non-overlapping SCD 2 validity windows, and revenue parity.</div>
+          </div>
+          <button class="cmd-code" onclick="copyText('cd dbt && dbt test --exclude tag:s3_dependent --profiles-dir .')">
+            <span>dbt test --exclude tag:s3_dependent</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+
+        <div class="cmd-card">
+          <div class="cmd-info">
+            <div class="cmd-title">Cross-Layer Monetary Reconciliation Audit</div>
+            <div class="cmd-desc">Asserts exact $0.00 revenue drift between granular purchase transactions and daily financial marts.</div>
+          </div>
+          <button class="cmd-code" onclick="copyText('python checks/run_reconciliation.py')">
+            <span>python checks/run_reconciliation.py</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+
+        <div class="cmd-card">
+          <div class="cmd-info">
+            <div class="cmd-title">Schema Evolution Compatibility Diff</div>
+            <div class="cmd-desc">Analyzes schema diffs and flags breaking changes (type shifts, dropped columns, tightened nullability).</div>
+          </div>
+          <button class="cmd-code" onclick="copyText('python contracts/contract_cli.py diff --old-contract contracts/schemas/ecommerce_events_v1.yml --new-contract contracts/schemas/ecommerce_events_v2_breaking.yml')">
+            <span>python contracts/contract_cli.py diff ...</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+
+        <div class="section-header" style="margin-top: 24px;">
+          <div>
+            <h2 class="section-title">Architectural Decision Records (ADRs)</h2>
+            <p class="section-subtitle">Core technical tradeoffs and architectural design rationale</p>
+          </div>
+        </div>
+
+        <div class="medallion-grid">
+          <div class="medallion-card" style="border-color:rgba(56,189,248,0.2);">
+            <div class="card-tag" style="color:var(--accent);">ADR-001 &bull; STORAGE</div>
+            <div class="card-title">MinIO S3A vs Local Filesystem</div>
+            <div class="card-desc">Adopted S3-compatible MinIO object storage with explicit date partitioning for realistic cloud architecture simulation and zero local FS locking.</div>
+          </div>
+          <div class="medallion-card" style="border-color:rgba(16,185,129,0.2);">
+            <div class="card-tag" style="color:var(--emerald);">ADR-002 &bull; TABLE FORMAT</div>
+            <div class="card-title">Delta Lake ACID MERGE</div>
+            <div class="card-desc">Replaced plain Parquet with Delta Lake format to gain ACID transactions, atomic MERGE upserts, and SHA-256 deduplication.</div>
+          </div>
+          <div class="medallion-card" style="border-color:rgba(245,158,11,0.2);">
+            <div class="card-tag" style="color:var(--amber);">ADR-003 &bull; SQL ENGINE</div>
+            <div class="card-title">DuckDB In-Process Engine for dbt</div>
+            <div class="card-desc">Selected DuckDB to execute all Gold dimensional models locally with ultra-fast column-store execution and direct Delta Lake scanning.</div>
+          </div>
+          <div class="medallion-card" style="border-color:rgba(168,85,247,0.2);">
+            <div class="card-tag" style="color:var(--purple);">ADR-004 &bull; GOVERNANCE</div>
+            <div class="card-title">Versioned YAML Data Contracts</div>
+            <div class="card-desc">Adopted proactive schema contracts with dead-letter quarantine routing to catch bad schemas before polluting downstream analytics.</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ================= SEARCH MODAL ================= -->
+  <div id="search-modal" onclick="closeSearch(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <input type="text" id="modal-search-input" class="modal-input" placeholder="Search tables, models, metrics, or contracts... (e.g. fact_purchases)" oninput="filterModalSearch(this.value)"/>
+      <div class="modal-results" id="modal-results">
+        <div class="modal-item" onclick="selectSearchItem('fact_purchases')">
+          <span><strong>fact_purchases</strong> (Gold Fact Table &bull; 1 row/purchase)</span>
+          <span class="status-badge badge-amber">FACT</span>
+        </div>
+        <div class="modal-item" onclick="selectSearchItem('mart_daily_summary')">
+          <span><strong>mart_daily_summary</strong> (Gold Mart &bull; Daily Aggregates)</span>
+          <span class="status-badge badge-green">MART</span>
+        </div>
+        <div class="modal-item" onclick="selectSearchItem('dim_customer')">
+          <span><strong>dim_customer</strong> (Customer Dimension &bull; First Seen)</span>
+          <span class="status-badge badge-blue">DIM</span>
+        </div>
+        <div class="modal-item" onclick="selectSearchItem('dim_product')">
+          <span><strong>dim_product</strong> (Product Dimension &bull; SCD Type 2)</span>
+          <span class="status-badge badge-blue">DIM</span>
+        </div>
+        <div class="modal-item" onclick="selectSearchItem('contracts')">
+          <span><strong>Data Contracts</strong> (YAML Schema Evolution Analyzer)</span>
+          <span class="status-badge badge-green">GOVERNANCE</span>
+        </div>
+      </div>
+    </div>
   </div>
-</header>
 
-<!-- ===== SIDEBAR ======================================================== -->
-<aside id="sb">
+  <!-- ================= JAVASCRIPT LOGIC ================= -->
+  <script>
+    // ── Tab Navigation ──────────────────────────────────────────────────────────
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-view').forEach(v => v.classList.remove('active'));
 
-  <div class="sb-sec">
-    <div class="sb-lbl">Architecture Layers</div>
-    <div class="leg" data-filter="source">
-      <div class="leg-sw" style="background:var(--c-src);box-shadow:0 0 5px var(--c-src)"></div>
-      <div><div class="leg-name" style="color:var(--c-src)">SOURCE</div>
-        <div class="leg-desc">Kaggle CSV &mdash; 4M click events</div></div>
-    </div>
-    <div class="leg" data-filter="landing">
-      <div class="leg-sw" style="background:var(--c-land);box-shadow:0 0 5px var(--c-land)"></div>
-      <div><div class="leg-name" style="color:var(--c-land)">LANDING</div>
-        <div class="leg-desc">MinIO raw/ &mdash; Parquet by date</div></div>
-    </div>
-    <div class="leg" data-filter="bronze">
-      <div class="leg-sw" style="background:var(--c-brnz);box-shadow:0 0 5px var(--c-brnz)"></div>
-      <div><div class="leg-name" style="color:var(--c-brnz)">BRONZE</div>
-        <div class="leg-desc">PySpark Delta &mdash; raw ingestion</div></div>
-    </div>
-    <div class="leg" data-filter="quality">
-      <div class="leg-sw" style="background:var(--c-qual);box-shadow:0 0 5px var(--c-qual)"></div>
-      <div><div class="leg-name" style="color:var(--c-qual)">SODA GATES</div>
-        <div class="leg-desc">11+ checks &mdash; hard pipeline block</div></div>
-    </div>
-    <div class="leg" data-filter="silver">
-      <div class="leg-sw" style="background:var(--c-silv);box-shadow:0 0 5px var(--c-silv)"></div>
-      <div><div class="leg-name" style="color:var(--c-silv)">SILVER</div>
-        <div class="leg-desc">Delta MERGE &mdash; SHA-256 dedup</div></div>
-    </div>
-    <div class="leg" data-filter="gold">
-      <div class="leg-sw" style="background:var(--c-gold);box-shadow:0 0 5px var(--c-gold)"></div>
-      <div><div class="leg-name" style="color:var(--c-gold)">GOLD</div>
-        <div class="leg-desc">dbt / DuckDB &mdash; dims, facts, marts</div></div>
-    </div>
-    <div class="leg" data-filter="bi">
-      <div class="leg-sw" style="background:var(--c-bi);box-shadow:0 0 5px var(--c-bi)"></div>
-      <div><div class="leg-name" style="color:var(--c-bi)">BI</div>
-        <div class="leg-desc">Metabase &mdash; 3 exec. dashboards</div></div>
-    </div>
-    <div class="leg" data-filter="orchestration">
-      <div class="leg-sw" style="background:var(--c-orch);box-shadow:0 0 5px var(--c-orch)"></div>
-      <div><div class="leg-name" style="color:var(--c-orch)">AIRFLOW</div>
-        <div class="leg-desc">@daily schedule &mdash; BashOperator</div></div>
-    </div>
-  </div>
+      const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(tabId));
+      if (activeBtn) activeBtn.classList.add('active');
 
-  <div class="sb-sec">
-    <div class="sb-lbl">Pipeline Stats</div>
-    <div class="stat-grid">
-      <div class="stat-box"><div class="stat-n" id="sNodes">&mdash;</div><div class="stat-l">Nodes</div></div>
-      <div class="stat-box"><div class="stat-n" id="sEdges">&mdash;</div><div class="stat-l">Edges</div></div>
-      <div class="stat-box"><div class="stat-n">83</div><div class="stat-l">dbt Tests</div></div>
-      <div class="stat-box"><div class="stat-n stat-ok">&#10003;</div><div class="stat-l">All Pass</div></div>
-    </div>
-  </div>
+      const target = document.getElementById('tab-' + tabId);
+      if (target) target.classList.add('active');
 
-  <div class="sb-sec">
-    <div class="sb-lbl">Controls</div>
-    <div class="ctrl"><kbd>Hover</kbd> Highlight lineage path</div>
-    <div class="ctrl"><kbd>Click</kbd> Focus &amp; zoom to node</div>
-    <div class="ctrl"><kbd>Scroll</kbd> Zoom in / out</div>
-    <div class="ctrl"><kbd>Drag</kbd> Pan canvas</div>
-    <div class="ctrl" id="ctrl3d" style="display:none"><kbd>Alt+Drag</kbd> Orbit in 3D</div>
-  </div>
-
-</aside>
-
-<!-- ===== GRAPH AREA ===================================================== -->
-<div id="gc"></div>
-<div id="tip"></div>
-<button id="orbitBtn">&#8635;&nbsp; Auto-Orbit: ON</button>
-
-<!-- ===== SCRIPTS ======================================================== -->
-<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-<script src="https://unpkg.com/force-graph@1.43.5/dist/force-graph.min.js"></script>
-<script src="https://unpkg.com/3d-force-graph@1.73.4/dist/3d-force-graph.min.js"></script>
-<script>
-/* ================================================================
-   E-Commerce Lakehouse  |  2D DAG (default) + 3D toggle
-   Key features:
-   - 2D default: pinned layer columns, swimlanes, canvas labels
-   - Hover: dims non-connected nodes/links to 6% opacity
-   - Layer filter: click legend item or ribbon step
-   - 3D: extremely slow orbit (0.0003 rad/frame)
-   ================================================================ */
-(async () => {
-
-  /* ---------- load data ---------------------------------------- */
-  let G;
-  try {
-    const r = await fetch('./graph_data.json');
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    G = await r.json();
-  } catch(e) {
-    document.getElementById('gc').innerHTML =
-      '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);' +
-      'color:#f97316;text-align:center;font-size:15px">' +
-      '<div style="font-size:36px;margin-bottom:12px">&#9888;</div>' +
-      '<b>graph_data.json not found</b><br/>' +
-      '<span style="color:#4e5e76;font-size:12px">Run: python scripts/generate_graph.py</span></div>';
-    return;
-  }
-
-  document.getElementById('sNodes').textContent = G.meta.node_count;
-  document.getElementById('sEdges').textContent = G.meta.link_count;
-
-  /* ---------- layer config ------------------------------------- */
-  const LAYER_ORDER = ['source','landing','orchestration','bronze','quality','silver','gold','bi'];
-
-  const LAYER_X = {
-    source: -680, landing: -490, orchestration: -305,
-    bronze: -145, quality: -20, silver: 125, gold: 355, bi: 605,
-  };
-
-  const LAYER_COL = {
-    source:'#f97316', landing:'#facc15', orchestration:'#38bdf8',
-    bronze:'#cd7f32', quality:'#4ade80', silver:'#9ab0c8',
-    gold:'#ffd700', bi:'#a78bfa',
-  };
-
-  const LAYER_LBL = {
-    source:'SOURCE', landing:'LANDING', orchestration:'AIRFLOW',
-    bronze:'BRONZE', quality:'SODA', silver:'SILVER',
-    gold:'GOLD / dbt', bi:'BI',
-  };
-
-  /* ---------- adjacency for hover highlighting ----------------- */
-  const nodeById = Object.fromEntries(G.nodes.map(n => [n.id, n]));
-  const adj = {};            // nodeId -> Set<nodeId>  (neighbours)
-  const adjLink = {};        // nodeId -> Set<linkIndex>
-  G.nodes.forEach(n => { adj[n.id] = new Set(); adjLink[n.id] = new Set(); });
-  G.links.forEach((l, i) => {
-    const s = typeof l.source === 'object' ? l.source.id : l.source;
-    const t = typeof l.target === 'object' ? l.target.id : l.target;
-    if (adj[s]) { adj[s].add(t); adjLink[s].add(i); }
-    if (adj[t]) { adj[t].add(s); adjLink[t].add(i); }
-  });
-
-  /* ---------- state ------------------------------------------- */
-  let mode = '2d';
-  let hovId = null;
-  let filterLayer = null;
-  let G2 = null, G3 = null;
-  let orbitOn = true, orbitRAF = null, orbitAngle = Math.PI * 0.55;
-  const tip = document.getElementById('tip');
-  const gc  = document.getElementById('gc');
-  const sb  = document.getElementById('sb');
-  let sbOpen = true;
-
-  /* ---------- sidebar toggle ---------------------------------- */
-  document.getElementById('sbToggle').onclick = () => {
-    sbOpen = !sbOpen;
-    sb.classList.toggle('gone', !sbOpen);
-    gc.classList.toggle('full', !sbOpen);
-    setTimeout(() => {
-      if (G2) G2.width(gc.clientWidth).height(gc.clientHeight);
-      if (G3) G3.width(gc.clientWidth).height(gc.clientHeight);
-    }, 300);
-  };
-
-  /* ---------- sidebar legend filter --------------------------- */
-  document.querySelectorAll('.leg[data-filter]').forEach(el => {
-    el.addEventListener('click', () => {
-      const lyr = el.dataset.filter;
-      filterLayer = filterLayer === lyr ? null : lyr;
-      document.querySelectorAll('.leg').forEach(e =>
-        e.classList.toggle('dim', !!filterLayer && e.dataset.filter !== filterLayer)
-      );
-      hovId = null;
-      repaint2D();
-    });
-  });
-
-  /* ---------- ribbon filter ----------------------------------- */
-  document.querySelectorAll('.rp[data-layer]').forEach(el => {
-    el.addEventListener('click', () => {
-      const lyr = el.dataset.layer;
-      filterLayer = filterLayer === lyr ? null : lyr;
-      document.querySelectorAll('.rp').forEach(e =>
-        e.classList.toggle('active', !!filterLayer && e.dataset.layer === filterLayer)
-      );
-      hovId = null;
-      repaint2D();
-    });
-  });
-
-  /* ---------- focus helpers ----------------------------------- */
-  function nodeInFocus(node) {
-    if (filterLayer && node.layer !== filterLayer) return false;
-    if (!hovId) return true;
-    return node.id === hovId || (adj[hovId] && adj[hovId].has(node.id));
-  }
-  function linkInFocus(link, i) {
-    if (filterLayer) {
-      const s = typeof link.source === 'object' ? link.source : nodeById[link.source];
-      const t = typeof link.target === 'object' ? link.target : nodeById[link.target];
-      return s && t && (s.layer === filterLayer || t.layer === filterLayer);
+      if (tabId === 'lineage') {
+        resizeCanvas();
+      }
     }
-    if (!hovId) return true;
-    return adjLink[hovId] && adjLink[hovId].has(i);
-  }
 
-  /* ---------- force repaint for 2D (updates particles) -------- */
-  function repaint2D() {
-    if (!G2) return;
-    G2.linkDirectionalParticles(G2.linkDirectionalParticles());
-  }
-
-  /* ============================================================
-     2D GRAPH
-     ============================================================ */
-  function init2D() {
-    if (G3) { gc.innerHTML = ''; G3 = null; }
-    document.getElementById('orbitBtn').style.display = 'none';
-    document.getElementById('ctrl3d').style.display = 'none';
-
-    /* Pin nodes: X fixed by layer, Y spread within layer */
-    const byLayer = {};
-    LAYER_ORDER.forEach(l => byLayer[l] = []);
-    G.nodes.forEach(n => { if (byLayer[n.layer]) byLayer[n.layer].push(n); });
-    const VSPAN = 440;
-    G.nodes.forEach(n => {
-      n.fx = LAYER_X[n.layer] ?? 0;
-      const peers = byLayer[n.layer] || [n];
-      const idx   = peers.indexOf(n);
-      n.fy = peers.length > 1 ? -VSPAN/2 + idx * (VSPAN / (peers.length - 1)) : 0;
+    // ── Search Modal ────────────────────────────────────────────────────────────
+    function openSearch() {
+      document.getElementById('search-modal').classList.add('open');
+      const input = document.getElementById('modal-search-input');
+      input.value = '';
+      input.focus();
+    }
+    function closeSearch(e) {
+      document.getElementById('search-modal').classList.remove('open');
+    }
+    window.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        openSearch();
+      }
+      if (e.key === 'Escape') {
+        closeSearch();
+        closeDrawer();
+      }
     });
 
-    G2 = ForceGraph()(gc)
-      .width(gc.clientWidth).height(gc.clientHeight)
-      .backgroundColor('#07090f')
-      .graphData({ nodes: G.nodes, links: G.links })
-      .d3AlphaDecay(1).d3VelocityDecay(1)   // positions are already fixed
-      .enableNodeDrag(false)
-      .showNavInfo(false)
-      .nodeLabel(() => '')
-      .linkLabel(() => '')
+    function selectSearchItem(id) {
+      closeSearch();
+      if (id === 'contracts') {
+        switchTab('contracts');
+      } else {
+        switchTab('lineage');
+        focusNodeInGraph(id);
+      }
+    }
 
-      /* -- swimlanes drawn each frame BEFORE nodes ------------- */
-      .onRenderFramePre(ctx => {
-        const H = gc.clientHeight;
-        LAYER_ORDER.forEach((layer, i) => {
-          const lx  = LAYER_X[layer] ?? 0;
-          const plx = i > 0 ? LAYER_X[LAYER_ORDER[i-1]] : lx - 110;
-          const nlx = i < LAYER_ORDER.length-1 ? LAYER_X[LAYER_ORDER[i+1]] : lx + 110;
-          const sl  = G2.graph2ScreenCoords(((lx + plx) / 2), 0).x;
-          const sr  = G2.graph2ScreenCoords(((lx + nlx) / 2), 0).x;
-          const col = LAYER_COL[layer] || '#888';
-          const dim = filterLayer && filterLayer !== layer;
+    function filterModalSearch(query) {
+      const q = query.toLowerCase();
+      document.querySelectorAll('.modal-item').forEach(item => {
+        const text = item.innerText.toLowerCase();
+        item.style.display = text.includes(q) ? 'flex' : 'none';
+      });
+    }
 
-          /* background fill */
-          ctx.save();
-          ctx.globalAlpha = dim ? 0.012 : 0.05;
-          ctx.fillStyle = col;
-          ctx.fillRect(sl, 0, sr - sl, H);
-          ctx.restore();
+    // ── Contract Diff Rendering ─────────────────────────────────────────────────
+    let currentDiffMode = 'breaking';
 
-          /* left border */
-          ctx.save();
-          ctx.globalAlpha = dim ? 0.04 : 0.14;
-          ctx.strokeStyle = col;
-          ctx.lineWidth = 1;
-          ctx.setLineDash([4, 4]);
-          ctx.beginPath(); ctx.moveTo(sl, 30); ctx.lineTo(sl, H); ctx.stroke();
-          ctx.restore();
+    const diffConfigs = {
+      breaking: {
+        title: "V2.0.0 &bull; BREAKING",
+        code: `
+<span class="yaml-comment"># contracts/events/v2.0.0-breaking.yml</span>
+<span class="yaml-key">version:</span> <span class="yaml-val">2.0.0-breaking</span>
+<span class="yaml-key">dataset:</span> <span class="yaml-val">bronze_events</span>
+<span class="yaml-key">owner:</span> <span class="yaml-val">data-platform@shop.io</span>
+<span class="yaml-key">columns:</span>
+  - <span class="yaml-key">name:</span> <span class="yaml-val">event_id</span>
+    <span class="yaml-key">type:</span> <span class="yaml-val">string</span>
+    <span class="yaml-key">nullable:</span> <span class="yaml-bool">false</span>
+  - <span class="yaml-key">name:</span> <span class="yaml-val">event_time</span>
+    <span class="yaml-key">type:</span> <span class="yaml-val">timestamp</span>
+    <span class="yaml-key">nullable:</span> <span class="yaml-bool">false</span>
+  - <span class="yaml-key">name:</span> <span class="yaml-val">event_type</span>
+    <span class="yaml-key">type:</span> <span class="yaml-val">string</span>
+    <span class="yaml-key">nullable:</span> <span class="yaml-bool">false</span>
+    <span class="yaml-key">accepted_values:</span> [<span class="yaml-val">view</span>, <span class="yaml-val">cart</span>, <span class="yaml-val">purchase</span>]
+  - <span class="yaml-key">name:</span> <span class="yaml-val">price</span>
+<span class="yaml-changed">    type: decimal(12,2)     # ! TYPE_CHANGED  double -> decimal</span>
+<span class="yaml-changed">    nullable: false         # ! NULLABILITY_TIGHTENED</span>
+<span class="yaml-removed">  # ! COLUMN_DROPPED: user_session</span>
+<span class="yaml-key">quarantine:</span>
+  <span class="yaml-key">strategy:</span> <span class="yaml-val">dead_letter</span>
+  <span class="yaml-key">retention_days:</span> <span class="yaml-val">30</span>
+`,
+        badges: [
+          { type: 'breaking', text: '🚫 TYPE_CHANGED &bull; PRICE double &rarr; decimal(12,2)' },
+          { type: 'breaking', text: '🚫 NULLABILITY_TIGHTENED &bull; PRICE nullable &rarr; not null' },
+          { type: 'breaking', text: '🚫 COLUMN_DROPPED &bull; USER_SESSION removed in v2.0.0-breaking' }
+        ]
+      },
+      compatible: {
+        title: "V2.0.0 &bull; COMPATIBLE",
+        code: `
+<span class="yaml-comment"># contracts/events/v2.0.0.yml</span>
+<span class="yaml-key">version:</span> <span class="yaml-val">2.0.0</span>
+<span class="yaml-key">dataset:</span> <span class="yaml-val">bronze_events</span>
+<span class="yaml-key">owner:</span> <span class="yaml-val">data-platform@shop.io</span>
+<span class="yaml-key">columns:</span>
+  - <span class="yaml-key">name:</span> <span class="yaml-val">event_id</span>
+    <span class="yaml-key">type:</span> <span class="yaml-val">string</span>
+    <span class="yaml-key">nullable:</span> <span class="yaml-bool">false</span>
+  - <span class="yaml-key">name:</span> <span class="yaml-val">event_time</span>
+    <span class="yaml-key">type:</span> <span class="yaml-val">timestamp</span>
+    <span class="yaml-key">nullable:</span> <span class="yaml-bool">false</span>
+  - <span class="yaml-key">name:</span> <span class="yaml-val">event_type</span>
+    <span class="yaml-key">type:</span> <span class="yaml-val">string</span>
+    <span class="yaml-key">nullable:</span> <span class="yaml-bool">false</span>
+    <span class="yaml-key">accepted_values:</span> [<span class="yaml-val">view</span>, <span class="yaml-val">cart</span>, <span class="yaml-val">purchase</span>]
+  - <span class="yaml-key">name:</span> <span class="yaml-val">price</span>
+    <span class="yaml-key">type:</span> <span class="yaml-val">double</span>
+    <span class="yaml-key">nullable:</span> <span class="yaml-bool">true</span>
+  - <span class="yaml-key">name:</span> <span class="yaml-val">user_session</span>
+    <span class="yaml-key">type:</span> <span class="yaml-val">string</span>
+    <span class="yaml-key">nullable:</span> <span class="yaml-bool">true</span>
+<span class="yaml-added">  - name: device_type      # + OPTIONAL_COLUMN_ADDED (backward-compatible)</span>
+<span class="yaml-added">    type: string, nullable: true</span>
+<span class="yaml-added">  - name: currency         # + OPTIONAL_COLUMN_ADDED (backward-compatible)</span>
+<span class="yaml-added">    type: string, nullable: true</span>
+`,
+        badges: [
+          { type: 'compatible', text: '✅ OPTIONAL_COLUMN_ADDED &bull; DEVICE_TYPE added' },
+          { type: 'compatible', text: '✅ OPTIONAL_COLUMN_ADDED &bull; CURRENCY added' }
+        ]
+      }
+    };
 
-          /* layer label at top */
-          const cx = (sl + sr) / 2;
-          ctx.save();
-          ctx.globalAlpha = dim ? 0.18 : 0.9;
-          ctx.fillStyle = col;
-          ctx.font = 'bold 10px Inter,sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(LAYER_LBL[layer] || layer.toUpperCase(), cx, 19);
-          ctx.restore();
+    function setDiffMode(mode) {
+      currentDiffMode = mode;
+      document.getElementById('btn-diff-comp').classList.toggle('active', mode === 'compatible');
+      document.getElementById('btn-diff-break').classList.toggle('active', mode === 'breaking');
+
+      const config = diffConfigs[mode];
+      const col = document.getElementById('diff-right-col');
+      col.innerHTML = `
+        <div class="diff-col-header">
+          <span>${config.title}</span>
+          <button class="copy-btn" onclick="copySnippet('v2-code-render')">COPY</button>
+        </div>
+        <div id="v2-code-render">${config.code}</div>
+      `;
+
+      const badgeContainer = document.getElementById('diff-badges-row');
+      badgeContainer.innerHTML = config.badges.map(b => `
+        <span class="rule-badge rule-${b.type}">${b.text}</span>
+      `).join('');
+    }
+
+    // Initialize diff
+    setDiffMode('breaking');
+
+    // ── Copy Helpers ────────────────────────────────────────────────────────────
+    function copyText(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Copied to clipboard: " + text);
+      });
+    }
+    function copySnippet(elementId) {
+      const el = document.getElementById(elementId);
+      if (el) {
+        copyText(el.innerText);
+      }
+    }
+
+    // ── TAB 1: INTERACTIVE LINEAGE GRAPH ENGINE (CANVAS 2D DAG) ────────────────
+    const canvas = document.getElementById('dag-canvas');
+    const ctx = canvas.getContext('2d');
+
+    let graphData = { nodes: [], links: [] };
+    let layerOrder = ["source", "landing", "orchestration", "bronze", "quality", "silver", "gold", "marts", "bi"];
+    let layerColors = {
+      source: "#f97316",
+      landing: "#facc15",
+      orchestration: "#0ea5e9",
+      bronze: "#fb923c",
+      quality: "#10b981",
+      silver: "#38bdf8",
+      gold: "#f59e0b",
+      marts: "#ea580c",
+      bi: "#a855f7"
+    };
+
+    let activeLayerFilters = new Set(layerOrder);
+    let camera = { x: 80, y: 120, zoom: 0.95 };
+    let isDragging = false;
+    let dragStart = { x: 0, y: 0 };
+    let selectedNode = null;
+    let hoveredNode = null;
+    let criticalPathOnly = false;
+
+    // Build Default Lakehouse DAG Nodes & Edges
+    function buildDefaultGraph() {
+      const nodes = [
+        { id: "raw.events_csv", name: "events.csv", layer: "source", type: "Kaggle CSV (~4M rows)", format: "CSV", pk: "N/A" },
+        { id: "raw.products_csv", name: "products.csv", layer: "source", type: "Catalog Feed", format: "CSV", pk: "product_id" },
+        { id: "minio.raw_bucket", name: "MinIO raw/ bucket", layer: "landing", type: "Object Store", format: "Parquet", pk: "event_time" },
+        { id: "airflow.ingest_task", name: "Airflow: ingest_raw", layer: "orchestration", type: "BashOperator", format: "Python", pk: "batch_id" },
+        { id: "bronze.events", name: "bronze.events", layer: "bronze", type: "Delta Lake Table", format: "Delta", pk: "event_id" },
+        { id: "bronze.quarantine", name: "bronze.dead_letter", layer: "bronze", type: "Quarantine S3", format: "JSON", pk: "quarantine_id" },
+        { id: "soda.bronze_gate", name: "soda.bronze_gate", layer: "quality", type: "Soda Core Gate", format: "YAML Rules", pk: "11 checks" },
+        { id: "silver.events", name: "silver.events", layer: "silver", type: "Delta Lake MERGE", format: "Delta", pk: "event_key (SHA-256)" },
+        { id: "soda.silver_gate", name: "soda.silver_gate", layer: "quality", type: "Soda Core Gate", format: "YAML Rules", pk: "Deduplication" },
+        { id: "silver.purchases", name: "silver.purchases", layer: "silver", type: "Delta Sub-Table", format: "Delta", pk: "purchase_id" },
+        { id: "dbt.dim_customer", name: "dim_customer", layer: "gold", type: "dbt Model", format: "DuckDB Table", pk: "customer_key" },
+        { id: "dbt.dim_date", name: "dim_date", layer: "gold", type: "dbt Model", format: "DuckDB Table", pk: "date_key" },
+        { id: "dbt.dim_product", name: "dim_product", layer: "gold", type: "dbt Model (SCD 2)", format: "DuckDB Table", pk: "product_key" },
+        { id: "dbt.fact_events", name: "fact_events", layer: "gold", type: "dbt Fact Table", format: "DuckDB Table", pk: "event_key" },
+        { id: "dbt.fact_purchases", name: "fact_purchases", layer: "gold", type: "dbt Fact Table", format: "DuckDB Table", pk: "purchase_key" },
+        { id: "dbt.mart_daily", name: "mart_daily_summary", layer: "marts", type: "dbt Mart Table", format: "DuckDB Mart", pk: "date + cat_l1" },
+        { id: "dbt.mart_retention", name: "mart_customer_retention", layer: "marts", type: "dbt Mart Table", format: "DuckDB Mart", pk: "cohort_month" },
+        { id: "dbt.mart_category", name: "mart_category_perf", layer: "marts", type: "dbt Mart Table", format: "DuckDB Mart", pk: "category_l1" },
+        { id: "bi.dashboards", name: "Metabase Dashboards", layer: "bi", type: "Executive Analytics", format: "Dashboards", pk: "3 Boards" }
+      ];
+
+      const links = [
+        { source: "raw.events_csv", target: "minio.raw_bucket" },
+        { source: "raw.products_csv", target: "minio.raw_bucket" },
+        { source: "airflow.ingest_task", target: "bronze.events" },
+        { source: "minio.raw_bucket", target: "bronze.events" },
+        { source: "bronze.events", target: "bronze.quarantine" },
+        { source: "bronze.events", target: "soda.bronze_gate" },
+        { source: "soda.bronze_gate", target: "silver.events" },
+        { source: "silver.events", target: "soda.silver_gate" },
+        { source: "silver.events", target: "silver.purchases" },
+        { source: "silver.events", target: "dbt.dim_customer" },
+        { source: "silver.events", target: "dbt.dim_product" },
+        { source: "silver.events", target: "dbt.dim_date" },
+        { source: "silver.events", target: "dbt.fact_events" },
+        { source: "silver.purchases", target: "dbt.fact_purchases" },
+        { source: "dbt.dim_customer", target: "dbt.fact_events" },
+        { source: "dbt.dim_product", target: "dbt.fact_events" },
+        { source: "dbt.dim_date", target: "dbt.fact_events" },
+        { source: "dbt.fact_purchases", target: "dbt.mart_daily" },
+        { source: "dbt.dim_customer", target: "dbt.mart_retention" },
+        { source: "dbt.fact_purchases", target: "dbt.mart_retention" },
+        { source: "dbt.dim_product", target: "dbt.mart_category" },
+        { source: "dbt.fact_purchases", target: "dbt.mart_category" },
+        { source: "dbt.mart_daily", target: "bi.dashboards" },
+        { source: "dbt.mart_retention", target: "bi.dashboards" },
+        { source: "dbt.mart_category", target: "bi.dashboards" }
+      ];
+
+      return { nodes, links };
+    }
+
+    // Layout nodes into horizontal columns
+    function layoutGraph(data) {
+      const colX = {
+        source: 60,
+        landing: 260,
+        orchestration: 260,
+        bronze: 460,
+        quality: 680,
+        silver: 880,
+        gold: 1140,
+        marts: 1420,
+        bi: 1680
+      };
+
+      const layerCounts = {};
+      layerOrder.forEach(l => layerCounts[l] = 0);
+
+      data.nodes.forEach(n => {
+        const l = n.layer || "gold";
+        const count = layerCounts[l] || 0;
+        layerCounts[l] = count + 1;
+
+        n.width = 175;
+        n.height = 54;
+        n.x = (colX[l] !== undefined ? colX[l] : 1000);
+        n.y = 80 + count * 82;
+      });
+
+      // Airflow task offset
+      const airNode = data.nodes.find(n => n.id === "airflow.ingest_task");
+      if (airNode) airNode.y = 260;
+
+      return data;
+    }
+
+    function initGraph() {
+      // Try to load docs/graph_data.json if available
+      fetch('graph_data.json')
+        .then(res => res.json())
+        .then(json => {
+          if (json.nodes && json.nodes.length > 0) {
+            graphData = layoutGraph(json);
+          } else {
+            graphData = layoutGraph(buildDefaultGraph());
+          }
+          renderGraph();
+        })
+        .catch(() => {
+          graphData = layoutGraph(buildDefaultGraph());
+          renderGraph();
         });
-      })
+    }
 
-      /* -- custom node canvas rendering ------------------------ */
-      .nodeCanvasObject((node, ctx, gs) => {
-        const focused = nodeInFocus(node);
-        const alpha   = focused ? 1 : 0.06;
-        const col     = node.color || '#38bdf8';
-        const R       = (node.val || 6) * 1.5;
-        const x = node.x, y = node.y;
+    function resizeCanvas() {
+      const container = document.getElementById('lineage-view');
+      canvas.width = container.clientWidth * window.devicePixelRatio;
+      canvas.height = container.clientHeight * window.devicePixelRatio;
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      renderGraph();
+    }
+    window.addEventListener('resize', resizeCanvas);
 
-        ctx.save();
-        ctx.globalAlpha = alpha;
+    // Graph Render Loop
+    function renderGraph() {
+      const w = canvas.width / window.devicePixelRatio;
+      const h = canvas.height / window.devicePixelRatio;
+      ctx.clearRect(0, 0, w, h);
 
-        /* glow halo */
-        if (focused) {
-          const g = ctx.createRadialGradient(x, y, R * 0.5, x, y, R * 2.6);
-          g.addColorStop(0, col + '44');
-          g.addColorStop(1, col + '00');
-          ctx.fillStyle = g;
-          ctx.beginPath(); ctx.arc(x, y, R * 2.6, 0, Math.PI * 2); ctx.fill();
-        }
+      ctx.save();
+      ctx.translate(camera.x, camera.y);
+      ctx.scale(camera.zoom, camera.zoom);
 
-        /* main sphere */
-        ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2);
-        ctx.fillStyle = col;
-        ctx.fill();
+      const nodeMap = {};
+      graphData.nodes.forEach(n => nodeMap[n.id] = n);
 
-        /* specular highlight */
-        ctx.beginPath(); ctx.arc(x - R * 0.28, y - R * 0.28, R * 0.36, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,0.30)';
-        ctx.fill();
+      // Draw Edges
+      graphData.links.forEach(l => {
+        const src = nodeMap[l.source];
+        const tgt = nodeMap[l.target];
+        if (!src || !tgt) return;
+        if (!activeLayerFilters.has(src.layer) || !activeLayerFilters.has(tgt.layer)) return;
 
-        /* label — shown when zoomed in enough */
-        if (gs > 0.5) {
-          const fs   = Math.max(8.5, Math.min(12, 10 / gs));
-          const lbl  = node.name;
-          ctx.font = 'bold ' + fs + 'px Inter,sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'top';
-          /* pill background */
-          const tw = ctx.measureText(lbl).width;
-          const lx = x - tw/2 - 5, ly = y + R + 5;
-          ctx.globalAlpha = alpha * 0.82;
-          ctx.fillStyle = 'rgba(7,9,15,0.88)';
-          ctx.beginPath();
-          ctx.roundRect ? ctx.roundRect(lx, ly, tw+10, fs+6, (fs+6)/2)
-                        : ctx.rect(lx, ly, tw+10, fs+6);
-          ctx.fill();
-          ctx.globalAlpha = alpha;
-          ctx.fillStyle = focused ? col : '#6b7a92';
-          ctx.fillText(lbl, x, ly + 3);
-        }
+        const isHighlighted = (selectedNode && (selectedNode.id === src.id || selectedNode.id === tgt.id));
+        const isCritical = criticalPathOnly && (src.layer === 'source' || src.layer === 'bronze' || src.layer === 'silver' || src.layer === 'gold' || src.layer === 'marts');
 
-        ctx.restore();
-      })
-      .nodeCanvasObjectMode(() => 'replace')
+        ctx.beginPath();
+        const startX = src.x + src.width;
+        const startY = src.y + src.height / 2;
+        const endX = tgt.x;
+        const endY = tgt.y + tgt.height / 2;
+        const cp1x = startX + (endX - startX) * 0.5;
+        const cp2x = startX + (endX - startX) * 0.5;
 
-      /* -- custom link canvas rendering ------------------------ */
-      .linkCanvasObjectMode(() => 'replace')
-      .linkCanvasObject((link, ctx) => {
-        const i = G.links.indexOf(link);
-        const focused = linkInFocus(link, i);
-        const col     = link.particle_color || '#38bdf8';
-        const s = typeof link.source === 'object' ? link.source : nodeById[link.source];
-        const t = typeof link.target === 'object' ? link.target : nodeById[link.target];
-        if (!s || !t) return;
+        ctx.moveTo(startX, startY);
+        ctx.bezierCurveTo(cp1x, startY, cp2x, endY, endX, endY);
 
-        ctx.save();
-        ctx.globalAlpha = focused ? 0.6 : 0.04;
-        ctx.strokeStyle = col;
-        ctx.lineWidth   = focused ? 1.6 : 0.8;
-        if (!focused) ctx.setLineDash([3, 5]);
-        ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(t.x, t.y); ctx.stroke();
-
-        /* directional arrow */
-        if (focused) {
-          const ang = Math.atan2(t.y - s.y, t.x - s.x);
-          const tR  = (t.val || 6) * 1.5;
-          const ax  = t.x - Math.cos(ang) * (tR + 3);
-          const ay  = t.y - Math.sin(ang) * (tR + 3);
-          const AL  = 8;
-          ctx.fillStyle = col;
-          ctx.beginPath();
-          ctx.moveTo(ax, ay);
-          ctx.lineTo(ax - AL * Math.cos(ang - 0.45), ay - AL * Math.sin(ang - 0.45));
-          ctx.lineTo(ax - AL * Math.cos(ang + 0.45), ay - AL * Math.sin(ang + 0.45));
-          ctx.closePath(); ctx.fill();
-        }
-        ctx.restore();
-      })
-
-      /* -- animated particles on focused links only ------------ */
-      .linkDirectionalParticles(l => {
-        const i = G.links.indexOf(l);
-        return linkInFocus(l, i) ? 3 : 0;
-      })
-      .linkDirectionalParticleSpeed(l => l.particle_speed || 0.0045)
-      .linkDirectionalParticleWidth(l => (l.particle_width || 2) * 1.3)
-      .linkDirectionalParticleColor(l => l.particle_color || '#38bdf8')
-
-      /* -- hover ------------------------------------------------ */
-      .onNodeHover(node => {
-        hovId = node ? node.id : null;
-        document.body.style.cursor = node ? 'pointer' : 'default';
-        if (node) {
-          tip.innerHTML = node.tooltip || '<b>' + node.name + '</b>';
-          tip.classList.add('show');
+        if (isHighlighted) {
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 2.5;
+          ctx.shadowColor = 'rgba(56,189,248,0.5)';
+          ctx.shadowBlur = 8;
+        } else if (isCritical) {
+          ctx.strokeStyle = 'rgba(56,189,248,0.6)';
+          ctx.lineWidth = 1.8;
+          ctx.shadowBlur = 0;
         } else {
-          setTimeout(() => tip.classList.remove('show'), 160);
+          ctx.strokeStyle = 'rgba(255,255,255,0.09)';
+          ctx.lineWidth = 1.2;
+          ctx.shadowBlur = 0;
         }
-        repaint2D();
-      })
-
-      /* -- click: zoom to node --------------------------------- */
-      .onNodeClick(node => {
-        G2.centerAt(node.x, node.y, 500);
-        G2.zoom(2.8, 500);
-        hovId = node.id;
-        tip.innerHTML = node.tooltip || '<b>' + node.name + '</b>';
-        tip.classList.add('show');
-        repaint2D();
-      })
-
-      /* -- background click: reset ----------------------------- */
-      .onBackgroundClick(() => {
-        G2.zoom(1, 400); G2.centerAt(0, 0, 400);
-        hovId = null; filterLayer = null;
-        tip.classList.remove('show');
-        document.querySelectorAll('.leg').forEach(e => e.classList.remove('dim'));
-        document.querySelectorAll('.rp').forEach(e => e.classList.remove('active'));
-        repaint2D();
+        ctx.stroke();
+        ctx.shadowBlur = 0;
       });
 
-    setTimeout(() => G2.zoomToFit(400, 52), 350);
-  }
+      // Draw Nodes
+      graphData.nodes.forEach(n => {
+        if (!activeLayerFilters.has(n.layer)) return;
 
-  /* ============================================================
-     3D GRAPH
-     ============================================================ */
-  function init3D() {
-    if (G2) { gc.innerHTML = ''; G2 = null; }
-    document.getElementById('orbitBtn').style.display = 'block';
-    document.getElementById('ctrl3d').style.display = '';
+        const isSelected = selectedNode && selectedNode.id === n.id;
+        const isHovered = hoveredNode && hoveredNode.id === n.id;
+        const color = layerColors[n.layer] || '#38bdf8';
 
-    /* Free Y/Z in 3D, but keep X layer lanes */
-    G.nodes.forEach(n => { delete n.fy; n.fx = LAYER_X[n.layer] ?? 0; });
+        // Card Body
+        ctx.beginPath();
+        ctx.roundRect(n.x, n.y, n.width, n.height, 8);
+        ctx.fillStyle = isSelected ? '#131c2d' : (isHovered ? '#101622' : '#0a0e17');
+        ctx.fill();
 
-    G3 = ForceGraph3D({ antialias: true })(gc)
-      .width(gc.clientWidth).height(gc.clientHeight)
-      .backgroundColor('#07090f')
-      .graphData({ nodes: G.nodes, links: G.links })
-      .showNavInfo(false)
-      .enableNodeDrag(false)
-      .nodeLabel(() => '')
+        ctx.lineWidth = isSelected ? 2 : 1;
+        ctx.strokeStyle = isSelected ? '#38bdf8' : (isHovered ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.08)');
+        if (isSelected) {
+          ctx.shadowColor = 'rgba(56,189,248,0.3)';
+          ctx.shadowBlur = 12;
+        }
+        ctx.stroke();
+        ctx.shadowBlur = 0;
 
-      .nodeThreeObject(node => {
-        const hex = parseInt((node.color || '#38bdf8').replace('#', ''), 16);
-        const R   = (node.val || 6) * 1.7;
-        const grp = new THREE.Group();
+        // Layer Color Indicator Line
+        ctx.fillStyle = color;
+        ctx.fillRect(n.x, n.y + 4, 3, n.height - 8);
 
-        /* sphere */
-        grp.add(new THREE.Mesh(
-          new THREE.SphereGeometry(R, 20, 20),
-          new THREE.MeshPhongMaterial({
-            color: hex, emissive: hex, emissiveIntensity: 0.45,
-            shininess: 80, transparent: true, opacity: 0.9,
-          })
-        ));
+        // Header Tag
+        ctx.font = '600 8.5px JetBrains Mono';
+        ctx.fillStyle = color;
+        ctx.fillText((n.layer || 'NODE').toUpperCase(), n.x + 12, n.y + 16);
 
-        /* canvas label */
-        const cv  = document.createElement('canvas');
-        const cx2 = cv.getContext('2d');
-        const FS  = 26;
-        cx2.font = 'bold ' + FS + 'px Inter,sans-serif';
-        const tw  = cx2.measureText(node.name).width;
-        const PD = 12, CH = FS + 12;
-        cv.width = tw + PD * 2; cv.height = CH;
-        cx2.fillStyle = 'rgba(7,9,15,0.82)';
-        if (cx2.roundRect) cx2.roundRect(0, 0, cv.width, CH, CH/2);
-        else cx2.rect(0, 0, cv.width, CH);
-        cx2.fill();
-        cx2.fillStyle = node.color || '#e8edf5';
-        cx2.font = 'bold ' + FS + 'px Inter,sans-serif';
-        cx2.textBaseline = 'middle';
-        cx2.fillText(node.name, PD, CH / 2);
-        const spr = new THREE.Sprite(new THREE.SpriteMaterial({
-          map: new THREE.CanvasTexture(cv),
-          depthWrite: false, transparent: true, opacity: 0.9,
-        }));
-        spr.scale.set(cv.width * 0.052, CH * 0.052, 1);
-        spr.position.set(0, -(R + 10), 0);
-        grp.add(spr);
-        return grp;
-      })
-      .nodeThreeObjectExtend(false)
-      .linkColor(l => (l.particle_color || '#334155') + '88')
-      .linkWidth(0.9).linkOpacity(0.28)
-      .linkDirectionalArrowLength(7).linkDirectionalArrowRelPos(0.88)
-      .linkDirectionalArrowColor(l => l.particle_color || '#38bdf8')
-      .linkDirectionalParticles(3)
-      .linkDirectionalParticleSpeed(l => l.particle_speed || 0.004)
-      .linkDirectionalParticleWidth(l => (l.particle_width || 2) * 1.2)
-      .linkDirectionalParticleColor(l => l.particle_color || '#38bdf8')
-      .linkCurvature(0.1)
-      .onNodeHover(node => {
-        document.body.style.cursor = node ? 'pointer' : 'default';
-        if (node) { tip.innerHTML = node.tooltip || '<b>' + node.name + '</b>'; tip.classList.add('show'); }
-        else setTimeout(() => tip.classList.remove('show'), 160);
-      })
-      .onNodeClick(node => {
-        pauseOrbit();
-        G3.cameraPosition(
-          { x: node.x + 65, y: (node.y||0) + 30, z: (node.z||0) + 140 },
-          { x: node.x, y: node.y||0, z: node.z||0 }, 1000
-        );
+        // Node Title
+        ctx.font = '700 11.5px Inter';
+        ctx.fillStyle = '#f8fafc';
+        const displayTitle = n.name.length > 20 ? n.name.slice(0, 18) + '..' : n.name;
+        ctx.fillText(displayTitle, n.x + 12, n.y + 32);
+
+        // Format Badge
+        ctx.font = '500 9px JetBrains Mono';
+        ctx.fillStyle = '#64748b';
+        ctx.fillText(n.format || 'Table', n.x + 12, n.y + 46);
       });
 
-    /* lighting */
-    const sc = G3.scene();
-    sc.add(new THREE.AmbientLight(0x1a2040, 2.2));
-    const dl = new THREE.DirectionalLight(0xffffff, 0.5); dl.position.set(1,2,1); sc.add(dl);
-    const pl = new THREE.PointLight(0x38bdf8, 0.8, 1500); pl.position.set(0,400,200); sc.add(pl);
-    const gl = new THREE.PointLight(0xffd700, 0.5, 1000); gl.position.set(300,-100,100); sc.add(gl);
-    const vl = new THREE.PointLight(0xa78bfa, 0.35, 900); vl.position.set(600, 80,-100); sc.add(vl);
+      ctx.restore();
+    }
 
-    /* orbit */
-    orbitOn = true; scheduleOrbit();
-    gc.addEventListener('mousedown', pauseOrbit);
-    gc.addEventListener('wheel', pauseOrbit, { passive: true });
-  }
+    // Node Click & Hover Handling
+    function getNodeAt(x, y) {
+      const graphX = (x - camera.x) / camera.zoom;
+      const graphY = (y - camera.y) / camera.zoom;
 
-  /* ---------- orbit logic ------------------------------------- */
-  let idleTmr;
-  function orbitStep() {
-    if (!orbitOn || !G3) { orbitRAF = null; return; }
-    orbitAngle += 0.0003;          // ~120 s per full revolution
-    G3.cameraPosition({
-      x: 920 * Math.sin(orbitAngle),
-      y: 115 + 38 * Math.sin(orbitAngle * 0.3),
-      z: 920 * Math.cos(orbitAngle),
+      for (let i = graphData.nodes.length - 1; i >= 0; i--) {
+        const n = graphData.nodes[i];
+        if (!activeLayerFilters.has(n.layer)) continue;
+        if (graphX >= n.x && graphX <= n.x + n.width && graphY >= n.y && graphY <= n.y + n.height) {
+          return n;
+        }
+      }
+      return null;
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+      const node = getNodeAt(clickX, clickY);
+
+      if (node) {
+        selectedNode = node;
+        openDrawer(node);
+        renderGraph();
+      } else {
+        isDragging = true;
+        dragStart = { x: e.clientX - camera.x, y: e.clientY - camera.y };
+      }
     });
-    orbitRAF = requestAnimationFrame(orbitStep);
-  }
-  function scheduleOrbit() { if (!orbitRAF) orbitStep(); }
-  function pauseOrbit() {
-    orbitOn = false;
-    if (orbitRAF) { cancelAnimationFrame(orbitRAF); orbitRAF = null; }
-    clearTimeout(idleTmr);
-    idleTmr = setTimeout(() => { orbitOn = true; scheduleOrbit(); updateOrbitBtn(); }, 7000);
-    updateOrbitBtn();
-  }
-  function updateOrbitBtn() {
-    const b = document.getElementById('orbitBtn');
-    b.textContent = (orbitOn ? '↺ Auto-Orbit: ON' : '⏸ Paused — resuming in 7s');
-    b.classList.toggle('paused', !orbitOn);
-  }
-  document.getElementById('orbitBtn').onclick = () => {
-    orbitOn = !orbitOn;
-    if (orbitOn) scheduleOrbit();
-    else { if (orbitRAF){ cancelAnimationFrame(orbitRAF); orbitRAF = null; } }
-    clearTimeout(idleTmr); updateOrbitBtn();
-  };
 
-  /* ---------- mode toggle ------------------------------------- */
-  function switchMode(m) {
-    if (m === mode) return;
-    mode = m;
-    document.getElementById('btn2d').classList.toggle('on', m === '2d');
-    document.getElementById('btn3d').classList.toggle('on', m === '3d');
-    gc.innerHTML = '';
-    if (m === '2d') init2D(); else init3D();
-  }
-  document.getElementById('btn2d').onclick = () => switchMode('2d');
-  document.getElementById('btn3d').onclick = () => switchMode('3d');
+    window.addEventListener('mousemove', (e) => {
+      if (isDragging) {
+        camera.x = e.clientX - dragStart.x;
+        camera.y = e.clientY - dragStart.y;
+        renderGraph();
+      } else {
+        const rect = canvas.getBoundingClientRect();
+        const hovered = getNodeAt(e.clientX - rect.left, e.clientY - rect.top);
+        if (hovered !== hoveredNode) {
+          hoveredNode = hovered;
+          renderGraph();
+        }
+      }
+    });
 
-  /* ---------- tooltip follow mouse ---------------------------- */
-  document.addEventListener('mousemove', e => {
-    const tw = tip.offsetWidth;
-    const ox = e.clientX + 18;
-    tip.style.left = (ox + tw > window.innerWidth ? e.clientX - tw - 14 : ox) + 'px';
-    tip.style.top  = (e.clientY - 10) + 'px';
-  });
+    window.addEventListener('mouseup', () => { isDragging = false; });
 
-  /* ---------- resize ------------------------------------------ */
-  window.addEventListener('resize', () => {
-    if (G2) G2.width(gc.clientWidth).height(gc.clientHeight);
-    if (G3) G3.width(gc.clientWidth).height(gc.clientHeight);
-  });
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY > 0 ? 0.92 : 1.08;
+      zoomGraph(zoomFactor);
+    }, { passive: false });
 
-  /* ---------- start ------------------------------------------- */
-  init2D();
+    function zoomGraph(factor) {
+      camera.zoom = Math.max(0.3, Math.min(2.5, camera.zoom * factor));
+      renderGraph();
+    }
+    function resetGraphView() {
+      camera = { x: 80, y: 120, zoom: 0.95 };
+      renderGraph();
+    }
 
-})();
-</script>
+    function toggleLayerFilter(layer, chipEl) {
+      if (activeLayerFilters.has(layer)) {
+        activeLayerFilters.delete(layer);
+        chipEl.classList.remove('active');
+      } else {
+        activeLayerFilters.add(layer);
+        chipEl.classList.add('active');
+      }
+      renderGraph();
+    }
+
+    function toggleCriticalPath() {
+      criticalPathOnly = !criticalPathOnly;
+      document.getElementById('btn-critical-path').classList.toggle('active', criticalPathOnly);
+      renderGraph();
+    }
+
+    function filterGraphSearch(query) {
+      if (!query) {
+        selectedNode = null;
+        renderGraph();
+        return;
+      }
+      const match = graphData.nodes.find(n => n.name.toLowerCase().includes(query.toLowerCase()));
+      if (match) {
+        focusNodeInGraph(match.id);
+      }
+    }
+
+    function focusNodeInGraph(nodeId) {
+      const node = graphData.nodes.find(n => n.id.includes(nodeId) || n.name.includes(nodeId));
+      if (node) {
+        selectedNode = node;
+        camera.x = canvas.width / (2 * window.devicePixelRatio) - (node.x + node.width / 2) * camera.zoom;
+        camera.y = canvas.height / (2 * window.devicePixelRatio) - (node.y + node.height / 2) * camera.zoom;
+        openDrawer(node);
+        renderGraph();
+      }
+    }
+
+    // Node Drawer Open/Close
+    function openDrawer(node) {
+      const drawer = document.getElementById('node-drawer');
+      document.getElementById('drawer-node-layer').innerText = (node.layer || 'GOLD').toUpperCase();
+      document.getElementById('drawer-node-name').innerText = node.name;
+      document.getElementById('drawer-node-desc').innerText = node.type || 'E-Commerce Lakehouse Model';
+      document.getElementById('drawer-resource-type').innerText = node.layer === 'orchestration' ? 'Airflow DAG' : 'dbt Model';
+      document.getElementById('drawer-format').innerText = node.format || 'DuckDB Table';
+      document.getElementById('drawer-pk').innerText = node.pk || 'event_key';
+      document.getElementById('drawer-part').innerText = node.layer === 'bronze' || node.layer === 'landing' ? 'event_date' : 'N/A';
+
+      const codeSnippets = {
+        'fact_purchases': `-- dbt Fact Purchase Model\nSELECT\n  md5(user_id || event_time) as purchase_key,\n  user_id as customer_key,\n  product_id as product_key,\n  date_key,\n  revenue\nFROM {{ ref('int_events_enriched') }}\nWHERE event_type = 'purchase'`,
+        'dim_product': `-- dbt SCD Type 2 Product Validity\nSELECT\n  product_key,\n  product_id,\n  price,\n  valid_from,\n  valid_to,\n  is_current\nFROM {{ ref('int_products_scd2') }}`,
+        'mart_daily_summary': `-- dbt Daily Financial Mart\nSELECT\n  date_day as date,\n  category_l1,\n  COUNT(*) as total_events,\n  SUM(revenue) as total_revenue\nFROM {{ ref('fact_events') }}\nGROUP BY 1, 2`
+      };
+      document.getElementById('drawer-code').innerText = codeSnippets[node.name] || `-- Generated dbt/Spark model\nSELECT * FROM {{ source('ecommerce', '${node.name}') }}`;
+
+      drawer.classList.add('open');
+    }
+
+    function closeDrawer() {
+      document.getElementById('node-drawer').classList.remove('open');
+      selectedNode = null;
+      renderGraph();
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    function exportGraphImage() {
+      const link = document.createElement('a');
+      link.download = 'lakehouse_lineage_architecture.png';
+      link.href = canvas.toDataURL();
+      link.click();
+    }
+
+    function triggerLoadCustomGraph() {
+      const url = prompt("Enter JSON URL or press OK to select a local file:", "graph_data.json");
+      if (url) {
+        fetch(url)
+          .then(r => r.json())
+          .then(data => {
+            graphData = layoutGraph(data);
+            renderGraph();
+            alert("Custom graph loaded successfully!");
+          })
+          .catch(e => alert("Error loading graph: " + e.message));
+      }
+    }
+
+    // Initial setup on DOM ready
+    window.addEventListener('DOMContentLoaded', () => {
+      initGraph();
+      resizeCanvas();
+    });
+  </script>
 </body>
 </html>
