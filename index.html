@@ -1956,6 +1956,7 @@
       const container = document.getElementById('lineage-view');
       canvas.width = container.clientWidth * window.devicePixelRatio;
       canvas.height = container.clientHeight * window.devicePixelRatio;
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // reset before re-scaling
       ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
       renderGraph();
     }
@@ -2213,8 +2214,13 @@
     }
 
     window.addEventListener('DOMContentLoaded', () => {
+      // Size the canvas first so renderGraph() has correct dimensions,
+      // then fetch graph data. initGraph() calls renderGraph() after data loads.
+      const container = document.getElementById('lineage-view');
+      canvas.width = container.clientWidth * window.devicePixelRatio;
+      canvas.height = container.clientHeight * window.devicePixelRatio;
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
       initGraph();
-      resizeCanvas();
     });
   </script>
 </body>
