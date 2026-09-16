@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
   <title>E-Commerce Medallion Lakehouse — Governance & Lineage Portal</title>
   <meta name="description" content="Interactive Governance, Lineage, Data Contracts, Quality Gates & Benchmarks Portal for E-Commerce Medallion Lakehouse"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -2032,8 +2035,16 @@
 
         n.width = 180;
         n.height = 54;
-        n.x = (colX[l] !== undefined ? colX[l] : 1160);
-        n.y = 70 + count * 78;
+
+        if (l === 'quality' && data.nodes.length > 25) {
+          const subCol = Math.floor(count / 10);
+          const subRow = count % 10;
+          n.x = colX.quality + subCol * 190;
+          n.y = 80 + subRow * 76;
+        } else {
+          n.x = (colX[l] !== undefined ? colX[l] : 1160);
+          n.y = 80 + count * 76;
+        }
       });
 
       const airNodes = data.nodes.filter(n => n.layer === 'orchestration');
