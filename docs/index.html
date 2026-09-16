@@ -1705,6 +1705,19 @@
 
   <!-- ================= JAVASCRIPT LOGIC ================= -->
   <script>
+    // ── Global Canvas & Engine State (Declared First to Prevent TDZ Errors) ───
+    const canvas = document.getElementById('dag-canvas');
+    const ctx = canvas ? canvas.getContext('2d') : null;
+
+    let layerOrder = ["source", "landing", "orchestration", "bronze", "quality", "silver", "gold", "marts", "bi"];
+    let activeLayerFilters = new Set(layerOrder);
+    let camera = { x: 50, y: 50, zoom: 0.88 };
+    let isDragging = false;
+    let dragStart = { x: 0, y: 0 };
+    let selectedNode = null;
+    let hoveredNode = null;
+    let criticalPathOnly = false;
+
     // ── Theme Management ────────────────────────────────────────────────────────
     function getStoredTheme() {
       return localStorage.getItem('lakehouse_theme') || 'light';
@@ -1717,14 +1730,14 @@
       const sunIcon = document.getElementById('theme-icon-sun');
       const moonIcon = document.getElementById('theme-icon-moon');
       if (theme === 'dark') {
-        sunIcon.style.display = 'block';
-        moonIcon.style.display = 'none';
+        if (sunIcon) sunIcon.style.display = 'block';
+        if (moonIcon) moonIcon.style.display = 'none';
       } else {
-        sunIcon.style.display = 'none';
-        moonIcon.style.display = 'block';
+        if (sunIcon) sunIcon.style.display = 'none';
+        if (moonIcon) moonIcon.style.display = 'block';
       }
 
-      if (typeof renderGraph === 'function') {
+      if (typeof renderGraph === 'function' && canvas && ctx) {
         renderGraph();
       }
     }
@@ -1758,11 +1771,14 @@
     function openSearch() {
       document.getElementById('search-modal').classList.add('open');
       const input = document.getElementById('modal-search-input');
-      input.value = '';
-      input.focus();
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
     }
     function closeSearch(e) {
-      document.getElementById('search-modal').classList.remove('open');
+      const modal = document.getElementById('search-modal');
+      if (modal) modal.classList.remove('open');
     }
     window.addEventListener('keydown', (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
@@ -1902,18 +1918,6 @@
     }
 
     // ── TAB 1: INTERACTIVE LINEAGE GRAPH ENGINE ────────────────────────────────
-    const canvas = document.getElementById('dag-canvas');
-    const ctx = canvas ? canvas.getContext('2d') : null;
-
-    let layerOrder = ["source", "landing", "orchestration", "bronze", "quality", "silver", "gold", "marts", "bi"];
-    let activeLayerFilters = new Set(layerOrder);
-    let camera = { x: 50, y: 50, zoom: 0.88 };
-    let isDragging = false;
-    let dragStart = { x: 0, y: 0 };
-    let selectedNode = null;
-    let hoveredNode = null;
-    let criticalPathOnly = false;
-
     function getLayerColor(layer) {
       const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
       const colors = {
