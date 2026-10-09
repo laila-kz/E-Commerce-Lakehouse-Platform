@@ -12,3 +12,4 @@ dbt/dbt_packages/
 dbt/logs/
 dbt/.user.yml
 dbt/dev.duckdb
+audit/logs/

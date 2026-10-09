@@ -20,15 +20,15 @@
 ## 🛠️ Step 0: Environment Setup & Infrastructure Initialization
 
 ### 1. Configure `.env`
-Ensure `.env` exists in the repository root (copy from `.env.exemple`):
+Ensure `.env` exists in the repository root (copy from `.env.example`):
 
 #### 🪟 Windows (PowerShell):
 ```powershell
-if (-not (Test-Path .env)) { Copy-Item .env.exemple .env }
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 #### 🐧 Linux / macOS (Bash):
 ```bash
-cp -n .env.exemple .env
+cp -n .env.example .env
 ```
 
 Your `.env` should look like:

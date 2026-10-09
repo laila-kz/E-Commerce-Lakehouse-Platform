@@ -127,7 +127,7 @@ The Gold layer dimensional model and analytical marts answer core e-commerce ope
 #### 🪟 Windows (PowerShell)
 ```powershell
 # Copy environment template
-Copy-Item .env.exemple .env
+Copy-Item .env.example .env
 
 # Start Docker infrastructure (MinIO, Spark, Airflow, Postgres, Metabase)
 docker compose up -d
@@ -144,7 +144,7 @@ python scripts/create_buckets.py
 #### 🐧 Linux / macOS (Bash)
 ```bash
 # Copy environment template
-cp .env.exemple .env
+cp .env.example .env
 
 # Start Docker infrastructure
 docker compose up -d
