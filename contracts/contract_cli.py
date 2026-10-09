@@ -217,18 +217,18 @@ def quarantine_bad_batch(data_path, violations, quarantine_dir="./data/quarantin
 
 def main():
     parser = argparse.ArgumentParser(description="Enterprise Data Contract CLI Engine")
-    subparsers = parser.add_subparsers(dest="command", help="Sub-commands")
+    subparsers = parser.add_subparsers(dest="command", help="Sub-commands (contract definitions in contracts/schemas/)")
 
     # Command: validate
     val_parser = subparsers.add_parser("validate", help="Validate a data file against a contract")
     val_parser.add_argument("--input-file", required=True, help="Path to input data file")
-    val_parser.add_argument("--contract-file", required=True, help="Path to YAML contract specification")
+    val_parser.add_argument("--contract-file", required=True, help="Path to YAML contract specification (fixtures in contracts/schemas/)")
     val_parser.add_argument("--quarantine-dir", default="./data/quarantine", help="Quarantine directory")
 
     # Command: diff
     diff_parser = subparsers.add_parser("diff", help="Compare two contract versions for compatibility")
     diff_parser.add_argument("--old-contract", required=True, help="Path to base contract YAML")
-    diff_parser.add_argument("--new-contract", required=True, help="Path to target contract YAML")
+    diff_parser.add_argument("--new-contract", required=True, help="Path to target contract YAML (fixtures in contracts/schemas/)")
 
     # Command: registry
     subparsers.add_parser("registry", help="Display registered dataset contracts and status")

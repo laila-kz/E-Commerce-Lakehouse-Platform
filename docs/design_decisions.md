@@ -931,7 +931,7 @@ The continuous integration pipeline automates code quality, linting, dbt model c
   1. **Storage Optimization**: Baseline Delta Lake vs. `OPTIMIZE` with `ZORDER BY (user_id, event_time)` — demonstrated **~3.0x speedup** via file coalescing and data-skipping statistics.
   2. **Join Strategy Tuning**: Sort-Merge Join vs. `broadcast(dim_product)` Hash Join — demonstrated **~3.2x speedup** by eliminating multi-gigabyte network shuffles.
   3. **Shuffle Partition Tuning**: Default 200 shuffle partitions vs. core-aligned 8 partitions — reduced task scheduling overhead for small-to-medium batch sizes.
-- **Case Study Artifact**: Formatted Markdown report generated at [`docs/performance_benchmarks.md`](file:///c:/Users/kheza/Desktop/Data%20Engineering/DataLakehouse/docs/performance_benchmarks.md).
+- **Case Study Artifact**: Formatted Markdown report generated at [`docs/performance_benchmarks.md`](performance_benchmarks.md).
 
 ### Git Tag
 `v1.2-week9-contracts-benchmarking-complete` — on merge commit into `main`

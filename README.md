@@ -44,7 +44,7 @@ graph TD
     subgraph Analytics & Marts ["3. Dimensional Modeling (dbt + DuckDB)"]
         K -->|Views| L[stg_events / stg_products]
         L -->|30-min Idle Windowing| M[int_sessions / int_events_enriched]
-        M -->|SCD Type 2 & Star Schema| N[dim_customer / dim_product / dim_date]
+        M -->|SCD Type 2 (product) + Star Schema| N[dim_customer / dim_product / dim_date]
         N --> O[fact_events / fact_purchases]
         O -->|Incremental delete+insert| P[mart_daily_summary / mart_retention / mart_category]
         P -->|84 dbt Tests Passing| R[dbt Exposures & BI Dashboards]
@@ -88,7 +88,7 @@ The Gold layer dimensional model and analytical marts answer core e-commerce ope
 │   └── plugins/
 │       └── slack_alert.py         # Dual-channel failure alerting (Slack Webhook + Email)
 ├── checks/                     # Quality gate runners and cross-layer reconciliation suites
-│   └── run_quality_gate.py     # Unified 3-layer Soda runner
+│   └── run_quality_gate.py     # Unified 3-layer quality gate runner (Raw + Bronze + Silver)
 ├── contracts/                  # Shift-left YAML data contract engine
 │   ├── contract_cli.py         # Contract validation CLI, diff analyzer, and quarantine router
 │   └── schemas/                # Versioned contract definitions (ecommerce_events_v1.yml)
@@ -227,7 +227,7 @@ Detailed Architecture Decision Records are maintained in [`docs/adr/`](docs/adr/
 - **[ADR-001: MinIO S3 & Delta Lake for Local Storage](docs/adr/ADR-001_minio_and_delta_lake_local_storage.md)** — Simulates cloud S3 API semantics and ACID transaction guarantees at zero infrastructure cost.
 - **[ADR-002: Hybrid Event-Time Watermarking & Lateness Buffer](docs/adr/ADR-002_hybrid_event_time_watermarking_and_lateness_buffer.md)** — Combines event-time partitioning with allowed lateness buffers and post-commit state advancement.
 - **[ADR-003: Deterministic SHA-256 Composite Keys](docs/adr/ADR-003_sha256_synthetic_event_keys.md)** — Enables deterministic deduplication across multi-engine boundaries.
-- **[ADR-004: dbt-on-DuckDB for Gold Layer](docs/adr/ADR-004_dbt_on_duckdb_for_gold_layer.md)** — Achieves sub-second analytical model compilation and 83 data tests directly against MinIO Delta tables.
+- **[ADR-004: dbt-on-DuckDB for Gold Layer](docs/adr/ADR-004_dbt_on_duckdb_for_gold_layer.md)** — Achieves sub-second analytical model compilation and 84 data tests directly against MinIO Delta tables.
 - **[ADR-005: Late Data & Partition Rebuild Strategy](docs/adr/ADR-005_late_data_and_partition_rebuild_strategy.md)** — Dynamic affected-partition detection for late events.
 - **[ADR-006: OpenLineage Standard & Marquez for Metadata Governance](docs/adr/ADR-006_openlineage_and_marquez_for_metadata_governance.md)** — Vendor-neutral metadata tracking across Spark, Airflow, and dbt.
 

@@ -152,7 +152,7 @@ docker compose exec spark /opt/spark/bin/spark-submit `
 ```bash
 make run-silver
 ```
-> **Output:** Incremental MERGE completed into `s3a://silver/ecommerce_events/` and watermark state updated in `s3a://silver/ecommerce_events_watermarks/`.
+> **Output:** Incremental MERGE completed into `s3a://silver/ecommerce_events/` and watermark state updated in `s3a://silver/ecommerce_events/_watermarks`.
 
 ---
 

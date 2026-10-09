@@ -38,8 +38,8 @@ I confirm out loud: **I am in strictly READ-ONLY mode. I will execute NO command
   pip install pyspark==3.5.0 delta-spark==3.0.0 dbt-duckdb soda-core-spark boto3 duckdb
   ```
 - **Files I Would Have Created/Modified:**
-  - [`.env.example`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/.env.example): Template for storage endpoints and database credentials.
-  - [`requirements.txt`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/requirements.txt): Pinning core engine libraries.
+  - [`.env.example`](.env.example): Template for storage endpoints and database credentials.
+  - [`requirements.txt`](./requirements.txt): Pinning core engine libraries.
   ```python
   # requirements.txt Skeleton
   pyspark==3.5.0
@@ -72,7 +72,7 @@ I confirm out loud: **I am in strictly READ-ONLY mode. I will execute NO command
   docker compose ps
   ```
 - **Files I Would Have Created/Modified:**
-  - [`docker-compose.yml`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/docker-compose.yml): Services definition for MinIO S3, Airflow, Spark Master/Worker, and Marquez lineage backend.
+  - [`docker-compose.yml`](./docker-compose.yml): Services definition for MinIO S3, Airflow, Spark Master/Worker, and Marquez lineage backend.
   ```yaml
   # docker-compose.yml (Skeleton excerpt)
   version: '3.8'
@@ -110,7 +110,7 @@ I confirm out loud: **I am in strictly READ-ONLY mode. I will execute NO command
   python scripts/create_buckets.py
   ```
 - **Files I Would Have Created/Modified:**
-  - [`scripts/create_buckets.py`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/scripts/create_buckets.py): Automated bucket creation via Boto3.
+  - [`scripts/create_buckets.py`](./scripts/create_buckets.py): Automated bucket creation via Boto3.
   ```python
   # scripts/create_buckets.py (Skeleton)
   import os, boto3
@@ -187,7 +187,7 @@ I confirm out loud: **I am in READ-ONLY mode. I will run NO commands and make NO
   mkdir -p contracts/schemas
   ```
 - **Files I Would Have Created/Modified:**
-  - [`contracts/schemas/ecommerce_events_v1.yml`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/contracts/schemas/ecommerce_events_v1.yml): YAML data contract specification.
+  - [`contracts/schemas/ecommerce_events_v1.yml`](./contracts/schemas/ecommerce_events_v1.yml): YAML data contract specification.
   ```yaml
   # ecommerce_events_v1.yml Skeleton
   dataset_name: "ecommerce_events"
@@ -222,7 +222,7 @@ I confirm out loud: **I am in READ-ONLY mode. I will run NO commands and make NO
   python contracts/contract_cli.py diff --old-contract contracts/schemas/ecommerce_events_v1.yml --new-contract contracts/schemas/ecommerce_events_v2.yml
   ```
 - **Files I Would Have Created/Modified:**
-  - [`contracts/contract_cli.py`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/contracts/contract_cli.py): CLI validation engine, schema evolution analyzer, and DuckDB schema registry logger.
+  - [`contracts/contract_cli.py`](./contracts/contract_cli.py): CLI validation engine, schema evolution analyzer, and DuckDB schema registry logger.
   ```python
   # contracts/contract_cli.py Skeleton
   def compare_contracts(old_contract, new_contract):
@@ -255,7 +255,7 @@ I confirm out loud: **I am in READ-ONLY mode. I will run NO commands and make NO
   python contracts/contract_cli.py validate --input-file data/corrupt_sample.csv --contract-file contracts/schemas/ecommerce_events_v1.yml
   ```
 - **Files I Would Have Created/Modified:**
-  - [`contracts/contract_cli.py`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/contracts/contract_cli.py#L201-L216): `quarantine_bad_batch()` function for isolating violating batches.
+  - [`contracts/contract_cli.py`](./contracts/contract_cli.py#L201-L216): `quarantine_bad_batch()` function for isolating violating batches.
   ```python
   # Quarantine logic skeleton in contract_cli.py
   def quarantine_bad_batch(data_path, violations, quarantine_dir="./data/quarantine"):
@@ -284,7 +284,7 @@ I confirm out loud: **I am in READ-ONLY mode. I will run NO commands and make NO
   python ingestion/kaggle_ingest.py --data-dir ./data
   ```
 - **Files I Would Have Created/Modified:**
-  - [`ingestion/kaggle_ingest.py`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/ingestion/kaggle_ingest.py): Tenacity retry uploads, partition keying, and S3 `_SUCCESS` marker writing.
+  - [`ingestion/kaggle_ingest.py`](./ingestion/kaggle_ingest.py): Tenacity retry uploads, partition keying, and S3 `_SUCCESS` marker writing.
   ```python
   # ingestion/kaggle_ingest.py Skeleton
   @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=2, max=30))
@@ -356,7 +356,7 @@ I confirm out loud: **I am in READ-ONLY mode. I will run NO commands and make NO
                                   ▼
                  ┌────────────────────────────────┐
                  │ s3a://silver Delta Table       │
-                 │ + s3a://silver_watermarks      │
+                 │ + s3a://silver/ecommerce_events/_watermarks                  │
                  └────────────────────────────────┘
 ```
 
@@ -371,8 +371,8 @@ I confirm out loud: **I am in READ-ONLY mode. I will run NO commands and make NO
   python spark_jobs/bronze_transform.py --batch-id b1042-demo --input-path s3a://raw/ecommerce_events/ --output-path s3a://bronze/
   ```
 - **Files I Would Have Created/Modified:**
-  - [`spark_jobs/schemas.py`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/spark_jobs/schemas.py): Pinned Spark `StructType` schema definition.
-  - [`spark_jobs/bronze_transform.py`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/spark_jobs/bronze_transform.py#L128-L150): Permissive reader and valid/quarantine split.
+  - [`spark_jobs/schemas.py`](./spark_jobs/schemas.py): Pinned Spark `StructType` schema definition.
+  - [`spark_jobs/bronze_transform.py`](./spark_jobs/bronze_transform.py#L128-L150): Permissive reader and valid/quarantine split.
   ```python
   # spark_jobs/bronze_transform.py Skeleton
   from schemas import BRONZE_EVENT_SCHEMA
@@ -409,7 +409,7 @@ I confirm out loud: **I am in READ-ONLY mode. I will run NO commands and make NO
   make run-bronze
   ```
 - **Files I Would Have Created/Modified:**
-  - [`spark_jobs/bronze_transform.py`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/spark_jobs/bronze_transform.py#L253-L318): Metadata injection and Delta Lake append writer.
+  - [`spark_jobs/bronze_transform.py`](./spark_jobs/bronze_transform.py#L253-L318): Metadata injection and Delta Lake append writer.
   ```python
   # Lineage enrichment skeleton
   def add_lineage_columns(df, batch_id, logger):
@@ -442,8 +442,8 @@ I confirm out loud: **I am in READ-ONLY mode. I will run NO commands and make NO
   python checks/run_quality_gate.py --layer bronze
   ```
 - **Files I Would Have Created/Modified:**
-  - [`checks/run_quality_gate.py`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/checks/run_quality_gate.py): Unified quality runner.
-  - [`soda/checks/bronze_checks.yml`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/soda/checks/bronze_checks.yml): Declarative Soda checks for missing count, freshness, and row count.
+  - [`checks/run_quality_gate.py`](./checks/run_quality_gate.py): Unified quality runner.
+  - [`soda/checks/bronze_checks.yml`](./soda/checks/bronze_checks.yml): Declarative Soda checks for missing count, freshness, and row count.
   ```yaml
   # soda/checks/bronze_checks.yml Skeleton
   checks for bronze_ecommerce_events:
@@ -472,7 +472,7 @@ I confirm out loud: **I am in READ-ONLY mode. I will run NO commands and make NO
   python spark_jobs/silver_transform.py --mode incremental --lookback-days 3
   ```
 - **Files I Would Have Created/Modified:**
-  - [`spark_jobs/silver_transform.py`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/spark_jobs/silver_transform.py#L363-L490): SHA-256 key generator and Delta `MERGE INTO` executor.
+  - [`spark_jobs/silver_transform.py`](./spark_jobs/silver_transform.py#L363-L490): SHA-256 key generator and Delta `MERGE INTO` executor.
   ```python
   # SHA-256 Key & Delta MERGE Skeleton
   def compute_event_key(df, logger):
@@ -499,7 +499,7 @@ I confirm out loud: **I am in READ-ONLY mode. I will run NO commands and make NO
 ---
 
 ### Step 2.5: Hybrid Watermarking with Lateness Buffer & Post-Commit State Advancement ⭐ (Load-Bearing Decision #4)
-- **Step Name + Goal:** Managing incremental Silver processing via stateful watermark tracking in `s3a://silver_watermarks` with a 3-day allowed lateness buffer, advancing state ONLY after MERGE verification.
+- **Step Name + Goal:** Managing incremental Silver processing via stateful watermark tracking in `s3a://silver/ecommerce_events/_watermarks` with a 3-day allowed lateness buffer, advancing state ONLY after MERGE verification.
 - **Mental Model:** A major production flaw in naive batch pipelines is relying on `MAX(created_at)`: if an event arrives 2 hours late due to client offline sync, naive high-watermark filtering drops it forever. Our hybrid watermarking strategy applies a 3-day lateness lookback buffer (`event_time >= watermark - lookback_days`) during Bronze reads, while advancing the persistent watermark table `_watermarks` ONLY after Delta MERGE commits successfully.
 - **Commands I Would Have Run (Narrative):**
   ```bash
@@ -507,8 +507,8 @@ I confirm out loud: **I am in READ-ONLY mode. I will run NO commands and make NO
   python spark_jobs/silver_transform.py --mode incremental --lookback-days 3
   ```
 - **Files I Would Have Created/Modified:**
-  - [`spark_jobs/silver_transform.py`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/spark_jobs/silver_transform.py#L148-L265): Watermark reader and bounded range filter.
-  - [`spark_jobs/silver_transform.py`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/spark_jobs/silver_transform.py#L537-L600): Post-commit watermark advancement logic (`advance_watermark()`).
+  - [`spark_jobs/silver_transform.py`](./spark_jobs/silver_transform.py#L148-L265): Watermark reader and bounded range filter.
+  - [`spark_jobs/silver_transform.py`](./spark_jobs/silver_transform.py#L537-L600): Post-commit watermark advancement logic (`advance_watermark()`).
   ```python
   # Watermarking & Post-Commit Advancement Skeleton
   def read_bronze_new_rows(spark, bronze_path, watermark_value, lookback_days=3):
@@ -523,7 +523,7 @@ I confirm out loud: **I am in READ-ONLY mode. I will run NO commands and make NO
       advance_watermark(spark, silver_path, final_df, args.batch_id, logger)
   ```
 - **Key Decisions & Tradeoffs (⭐):**
-  - *Decision:* Decoupled post-commit watermark state advancement in a dedicated Delta table (`silver_watermarks`) with allowed lateness lookback.
+  - *Decision:* Decoupled post-commit watermark state advancement in a dedicated Delta table (`s3a://silver/ecommerce_events/_watermarks`) with allowed lateness lookback.
   - *Tradeoff:* Reading with a 3-day lookback buffer forces the MERGE stage to re-evaluate recent partitions, but guarantees late-arriving events are incorporated without data loss while SHA-256 keys prevent duplication.
 - **How I Would Have Verified It Works:**
   - Simulate worker crash after MERGE (`FAIL_BEFORE_WATERMARK_UPDATE=true`). Re-run job: verify watermark remains at previous state and second MERGE execution deduplicates cleanly with zero corrupt or missing records.
@@ -592,8 +592,8 @@ I confirm out loud: **I am in READ-ONLY mode. I will run NO commands and make NO
   dbt debug --profile ecommerce_lakehouse
   ```
 - **Files I Would Have Created/Modified:**
-  - [`dbt/dbt_project.yml`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/dbt/dbt_project.yml): Configured with `dbt-duckdb` profile, staging views, and mart tables.
-  - [`dbt/profiles.yml`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/dbt/profiles.yml): Target environment parameters for DuckDB S3 secret configuration.
+  - [`dbt/dbt_project.yml`](./dbt/dbt_project.yml): Configured with `dbt-duckdb` profile, staging views, and mart tables.
+  - [`dbt/profiles.yml`](./dbt/profiles.yml): Target environment parameters for DuckDB S3 secret configuration.
   ```yaml
   # dbt/profiles.yml Skeleton
   ecommerce_lakehouse:
@@ -631,7 +631,7 @@ I confirm out loud: **I am in READ-ONLY mode. I will run NO commands and make NO
   dbt run --select staging
   ```
 - **Files I Would Have Created/Modified:**
-  - [`dbt/models/staging/stg_events.sql`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/dbt/models/staging/stg_events.sql): Staging view definition over Silver events.
+  - [`dbt/models/staging/stg_events.sql`](./dbt/models/staging/stg_events.sql): Staging view definition over Silver events.
   ```sql
   -- stg_events.sql Skeleton
   with source as (
@@ -669,7 +669,7 @@ I confirm out loud: **I am in READ-ONLY mode. I will run NO commands and make NO
   dbt run --select int_sessions
   ```
 - **Files I Would Have Created/Modified:**
-  - [`dbt/models/intermediate/int_sessions.sql`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/dbt/models/intermediate/int_sessions.sql#L1-L69): Windowing logic for session boundaries.
+  - [`dbt/models/intermediate/int_sessions.sql`](./dbt/models/intermediate/int_sessions.sql#L1-L69): Windowing logic for session boundaries.
   ```sql
   -- int_sessions.sql Skeleton
   with events_with_lag as (
@@ -717,8 +717,8 @@ I confirm out loud: **I am in READ-ONLY mode. I will run NO commands and make NO
   dbt run --select marts.dimensions
   ```
 - **Files I Would Have Created/Modified:**
-  - [`dbt/models/marts/dim_customer.sql`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/dbt/models/marts/dim_customer.sql): SCD Type 2 customer dimension.
-  - [`dbt/models/marts/dim_product.sql`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/dbt/models/marts/dim_product.sql): Product dimension with parsed category hierarchies (`category_l1`, `category_l2`, `category_l3`).
+  - [`dbt/models/marts/dim_customer.sql`](./dbt/models/marts/dim_customer.sql): Type 1 thin customer dimension.
+  - [`dbt/models/marts/dim_product.sql`](./dbt/models/marts/dim_product.sql): Product dimension with parsed category hierarchies (`category_l1`, `category_l2`, `category_l3`).
 - **Key Decisions & Tradeoffs:**
   - *Decision:* Star Schema dimensional layout (Kimball) in Gold layer.
   - *Justification:* Structuring Gold data into central fact tables flanked by surrogate-keyed dimension tables enables fast OLAP aggregations for Metabase and BI tools.
@@ -738,7 +738,7 @@ I confirm out loud: **I am in READ-ONLY mode. I will run NO commands and make NO
   dbt run --select marts.business_marts
   ```
 - **Files I Would Have Created/Modified:**
-  - [`dbt/models/marts/mart_daily_summary.sql`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/dbt/models/marts/mart_daily_summary.sql#L1-L84): Incremental `delete+insert` business mart.
+  - [`dbt/models/marts/mart_daily_summary.sql`](./dbt/models/marts/mart_daily_summary.sql#L1-L84): Incremental `delete+insert` business mart.
   ```sql
   -- mart_daily_summary.sql Skeleton
   {{ config(
@@ -785,7 +785,7 @@ I confirm out loud: **I am in READ-ONLY mode. I will run NO commands and make NO
   make test-dbt
   ```
 - **Files I Would Have Created/Modified:**
-  - [`dbt/tests/assert_cohort_retention_monotonic.sql`](file:///c:/Users/kheza/Desktop/Data_Engineering/E-Commerce-Lakehouse-Platform/dbt/tests/assert_cohort_retention_monotonic.sql): Custom invariant assertion test.
+  - [`dbt/tests/assert_cohort_retention_monotonic.sql`](./dbt/tests/assert_cohort_retention_monotonic.sql): Custom invariant assertion test.
   ```sql
   -- assert_cohort_retention_monotonic.sql Skeleton
   -- Test Fails if retained users in month N+1 > month N

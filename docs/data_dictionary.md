@@ -5,7 +5,7 @@ A unified reference catalog mapping schema definitions, column data types, busin
 ---
 
 ## 📥 Raw Zone (`s3a://raw/ecommerce_events/`)
-Unmodified JSON / CSV clickstream event dumps from Kaggle API.
+Unmodified CSV clickstream event dumps from Kaggle API.
 
 | Column | Type | Business Description | Nullable |
 |--------|------|----------------------|----------|
@@ -35,10 +35,11 @@ Schema-enforced Delta Lake table with lineage metadata added.
 | `price` | Double | Non-negative price value | No |
 | `user_id` | Long | Cleaned customer identifier | No |
 | `user_session` | String | Browser session ID | No |
-| `_ingested_at` | Timestamp | Processing timestamp when written to Bronze | No |
-| `_batch_id` | String | Spark pipeline run UUID | No |
-| `_source_file` | String | S3 input filepath origin | No |
-| `_partition_date` | Date | Partition key derived from `event_time` | No |
+| `ingested_at` | Timestamp | Processing timestamp when written to Bronze | No |
+| `source_file` | String | S3 input filepath origin | No |
+| `pipeline_run_id` | String | Spark pipeline run UUID | No |
+| `batch_id` | String | Spark pipeline run UUID | No |
+| `event_date` | Date | Partition key derived from `event_time` | No |
 
 ---
 
@@ -47,7 +48,7 @@ Deduplicated incremental Delta table with SHA-256 event keys and watermark track
 
 | Column | Type | Business Description | Key Role |
 |--------|------|----------------------|----------|
-| `event_key` | String | `sha2(concat(user_id, session, product, type, time))` | Primary Deduplication Key |
+| `event_key` | String | `sha2(concat(user_id, event_type, product_id, event_time))` with `event_time` ISO-8601 UTC | Primary Deduplication Key |
 | `event_time` | Timestamp | Validated event timestamp | Filter & Watermark Column |
 | `event_type` | String | Cleaned event type | Categorical |
 | `product_id` | Long | Verified product ID | Dimension Join Key |
@@ -61,13 +62,23 @@ Deduplicated incremental Delta table with SHA-256 event keys and watermark track
 ### `dim_product` (Type 2 Slowly Changing Dimension)
 | Column | Type | Description |
 |--------|------|-------------|
-| `product_sk` | String | Surrogate key (`md5(product_id + valid_from)`) |
+| `product_sk` | String | Surrogate key (hashed business key) |
 | `product_id` | Long | Business product ID |
 | `brand` | String | Historical brand version |
 | `price` | Double | Historical price version |
 | `valid_from` | Timestamp | Version activation timestamp |
 | `valid_to` | Timestamp | Version expiration timestamp (or NULL if current) |
 | `is_current` | Boolean | True for active current record version |
+
+### `dim_customer` (Type 1 Thin Dimension)
+| Column | Type | Description |
+|--------|------|-------------|
+| `customer_key` | String | Surrogate key (`md5(user_id)`) |
+| `user_id` | Long | Business customer identifier |
+| `first_seen_at` | Timestamp | First observed event timestamp |
+| `first_seen_date_key` | Integer | First observed event date key (`YYYYMMDD`) |
+
+> **Gold materialization note:** dbt models (dimensions, facts, marts) materialize to the local DuckDB file (`dev.duckdb`), not to a `gold` object-store bucket. The `gold` bucket exists for infra parity but is not written by dbt.
 
 ### `mart_daily_summary` (Incremental Daily Rollup)
 | Column | Type | Description |
