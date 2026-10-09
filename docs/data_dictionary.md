@@ -48,7 +48,7 @@ Deduplicated incremental Delta table with SHA-256 event keys and watermark track
 
 | Column | Type | Business Description | Key Role |
 |--------|------|----------------------|----------|
-| `event_key` | String | `sha2(concat(user_id, event_type, product_id, event_time))` with `event_time` ISO-8601 UTC | Primary Deduplication Key |
+| `event_key` | String | `sha2(concat_ws("|", user_id, event_type, product_id, event_time as UTC ISO string "yyyy-MM-dd'T'HH:mm:ss'Z'"), 256)` | Primary Deduplication Key |
 | `event_time` | Timestamp | Validated event timestamp | Filter & Watermark Column |
 | `event_type` | String | Cleaned event type | Categorical |
 | `product_id` | Long | Verified product ID | Dimension Join Key |
