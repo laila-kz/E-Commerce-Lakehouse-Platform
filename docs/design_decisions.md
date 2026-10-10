@@ -820,12 +820,14 @@ dbt_test_gate
 ### 3. Task Command & Parameter Mapping
 All tasks run inside the Airflow container (`cwd` = working dir). Spark tasks shell out with `docker exec spark`, so the Spark job/script path is `/workspace/...` (the mount inside the **spark** container); quality gates also run through `docker exec spark`. dbt commands run directly in the **airflow** container.
 
+**Catalyst extension wiring:** the Spark tasks add `--jars /opt/spark/jars-extra/*.jar` and `spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension,org.lakehouse.optimizer.EcommerceSparkExtensions`, matching the `Makefile` targets and the in-script `SparkSession` config. This means the custom `DynamicEcommercePartitionPruner` rule is passed to Airflow-launched Spark jobs (**configured, not verified at runtime** - runtime confirmation is Step 10).
+
 | Task Name | Container | Executor Command | Working Dir | Jinja Parameters |
 |-----------|-----------|------------------|-------------|------------------|
 | `ingest_raw` | airflow | `python /opt/airflow/project/ingestion/kaggle_ingest.py --data-dir /opt/airflow/project/data/demo_sample --force` | `/opt/airflow/project` | N/A |
-| `bronze_transform` | spark | `docker exec spark /opt/spark/bin/spark-submit --driver-memory 2g --executor-memory 2g --conf spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog /workspace/spark_jobs/bronze_transform.py` | `/opt/airflow/project` | N/A |
+| `bronze_transform` | spark | `docker exec spark /opt/spark/bin/spark-submit --driver-memory 2g --executor-memory 2g --jars /opt/spark/jars-extra/*.jar --conf spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension,org.lakehouse.optimizer.EcommerceSparkExtensions --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog /workspace/spark_jobs/bronze_transform.py` | `/opt/airflow/project` | N/A |
 | `bronze_quality_gate` | spark | `docker exec spark python3 /workspace/checks/run_quality_gate.py --layer bronze` | `/opt/airflow/project` | N/A |
-| `silver_transform` | spark | `docker exec spark /opt/spark/bin/spark-submit --driver-memory 2g --executor-memory 2g --conf spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog /workspace/spark_jobs/silver_transform.py --batch-id {{ run_id }}` | `/opt/airflow/project` | `{{ run_id }}` |
+| `silver_transform` | spark | `docker exec spark /opt/spark/bin/spark-submit --driver-memory 2g --executor-memory 2g --jars /opt/spark/jars-extra/*.jar --conf spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension,org.lakehouse.optimizer.EcommerceSparkExtensions --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog /workspace/spark_jobs/silver_transform.py --batch-id {{ run_id }}` | `/opt/airflow/project` | `{{ run_id }}` |
 | `silver_quality_gate` | spark | `docker exec spark python3 /workspace/checks/run_quality_gate.py --layer silver` | `/opt/airflow/project` | N/A |
 | `dbt_run_staging` | airflow | `dbt run --select staging --profiles-dir .` | `/opt/airflow/project/dbt` | N/A |
 | `dbt_run_intermediate` | airflow | `dbt run --select intermediate --profiles-dir .` | `/opt/airflow/project/dbt` | N/A |

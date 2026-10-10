@@ -81,7 +81,8 @@ RETRY_POLICY = {
 SPARK_SUBMIT_PREFIX = (
     "docker exec spark /opt/spark/bin/spark-submit "
     "--driver-memory 2g --executor-memory 2g "
-    "--conf spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension "
+    "--jars /opt/spark/jars-extra/*.jar "
+    "--conf spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension,org.lakehouse.optimizer.EcommerceSparkExtensions "
     "--conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
 )
 
