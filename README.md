@@ -200,14 +200,16 @@ Schema changes are evaluated prior to ingestion:
 - **`BREAKING`** (e.g. column dropped, column renamed, data type change): Batch is quarantined to `s3a://raw/quarantine/` and Slack diff alert is dispatched.
 
 ### 2. Failure-Injection Recovery Matrix
-The pipeline is verified against simulated crashes across all execution boundaries:
+Design intent for simulated crash points across execution boundaries. None of these outcomes is covered by an automated failure-injection test yet:
 
-| Injection Point | Injected Fault | Expected Behavior | Recovery Action | Verified Result |
+| Injection Point | Injected Fault | Expected Behavior | Recovery Action | Intended Result |
 |---|---|---|---|---|
-| **`FAIL_AFTER_INGEST`** | Raw file write completes, worker kills before marker | Idempotent marker check finds incomplete upload | Re-run ingestion | Overwrites cleanly; zero corrupt files |
+| **`FAIL_AFTER_INGEST`** | Raw file write completes, worker kills before marker | Idempotent marker check finds incomplete upload | Re-run ingestion | Incomplete upload is replaced on re-run (idempotent marker) |
 | **`FAIL_AFTER_BRONZE`** | Bronze Delta write succeeds, Soda check aborted | Downstream Silver job halts via gate failure | Re-run Soda gate | Gate passes; Silver resumes |
-| **`FAIL_AFTER_MERGE`** | Silver `MERGE` commits, crash before watermark update | Watermark remains at prior timestamp | Re-run Silver transform | SHA-256 key deduplicates batch; **zero duplicate rows** |
+| **`FAIL_AFTER_MERGE`** | Silver `MERGE` commits, crash before watermark update | Watermark remains at prior timestamp | Re-run Silver transform | Re-running an already-merged batch inserts 0 rows; duplicate keys inside a batch are collapsed deterministically (earliest `ingested_at`, then `source_file`) before the write |
 | **`FAIL_DURING_DBT`** | dbt model compilation fails mid-build | Staging views untouched; atomic table swap avoided | Re-run dbt | Target tables remain consistent |
+
+_These rows state intended recovery behavior, not verified results; no automated failure-injection test exists yet. Silver re-run idempotency and within-batch key collapse are covered by `tests/test_silver_dedup.py`, run in CI._
 
 ---
 
@@ -246,7 +248,7 @@ Detailed Architecture Decision Records are maintained in [`docs/adr/`](docs/adr/
 ## 🏆 Resume Summary Bullets
 
 - *Architected a production-patterned e-commerce Data Lakehouse utilizing PySpark, Delta Lake, MinIO, and dbt on DuckDB under Apache Airflow orchestration.*
-- *Implemented crash-safe incremental ingestion with SHA-256 deterministic deduplication and post-commit watermarking, validated via automated failure-injection matrices.*
+- *Implemented incremental ingestion with SHA-256 deterministic deduplication and post-commit watermarking; re-running an already-merged batch inserts 0 rows, and duplicate keys inside a batch are collapsed deterministically before the write (`tests/test_silver_dedup.py`, run in CI).*
 - *Engineered a YAML Data Contract engine with breaking-schema classification, automated dead-letter quarantine routing, and Slack diff alerting.*
 - *Integrated the OpenLineage standard with Marquez to capture end-to-end operational metadata, dataset facets, and schema evolution across Spark and dbt.*
 - *Authored a suite of 84 dbt tests covering SCD Type 2 dimensions, 30-minute idle sessionization, and cohort retention invariants.*

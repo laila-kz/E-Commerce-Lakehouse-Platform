@@ -452,7 +452,7 @@ Environment variable `SIMULATE_CRASH_AFTER_MERGE=true` triggered a runtime error
 |-------|----------|--------|--------|
 | Initial run | MERGE completes, crash before watermark | MERGE completed, watermark NOT advanced | ✅ |
 | Torn state | Data in Silver, watermark not advanced | Data present, watermark at old value | ✅ |
-| Recovery run | Zero rows inserted, watermark advances | Zero rows inserted, watermark advanced | ✅ |
+| Recovery run | Re-running an already-merged batch inserts 0 rows; watermark advances | Not yet covered by an automated test | ⏳ |
 
 ### Verification Queries
 
@@ -462,10 +462,10 @@ Environment variable `SIMULATE_CRASH_AFTER_MERGE=true` triggered a runtime error
 **Post-recovery watermark:** 2026-07-29 00:00:00
 
 ### Conclusion
-✅ **The pipeline is crash-safe at this boundary.**
-- No data loss occurred (data was already in Silver)
-- No duplication occurred (MERGE `event_key` matching prevented re-insertion)
-- Watermark self-corrected on the next run
+**Intended behavior at this boundary — not yet covered by an automated failure-injection test:**
+- Rows already committed to Silver are not lost by re-processing the range
+- Re-inserting the already-merged batch adds 0 rows (MERGE `event_key` match); within-batch duplicate keys are collapsed deterministically before the write
+- Watermark advancement is the last step, so a crash before it means the next run reprocesses the range
 
 ### Why This Works
 1. Delta ACID guarantees ensure MERGE commits atomically
@@ -855,7 +855,7 @@ dbt_test_full
 1. **Verification Test:** Re-injected `SIMULATE_CRASH_AFTER_MERGE=true` inside `silver_transform.py` during an Airflow-managed DAG execution.
 2. **Airflow Behavior:** `silver_transform` failed on attempt 1 immediately after Delta `MERGE` completed but prior to `watermark_advance`. Airflow's scheduler automatically transitioned the task to `up_for_retry` state with exponential backoff.
 3. **Automatic Recovery:** On Attempt 2 (with `SIMULATE_CRASH_AFTER_MERGE=false`), the script re-read the watermark (which remained at the pre-crash timestamp), identified the un-watermarked events, and performed a second deterministic `MERGE` using SHA-256 `event_key`.
-4. **Idempotency Result:** Zero duplicate rows created in Silver Delta table; watermark correctly advanced to ceiling; downstream `silver_quality_gate` passed cleanly on attempt 2.
+4. **Idempotency (tested behavior):** Re-running an already-merged batch inserts 0 rows; duplicate keys inside a batch are collapsed deterministically (earliest `ingested_at`, then `source_file`) before the write. Covered by `tests/test_silver_dedup.py`, run in CI. The crash-recovery retry outcome described above is not yet covered by an automated test.
 
 
 ## Day 48 — Operational Runbook: Multi-Day Backfills via Airflow Native CLI
@@ -885,7 +885,7 @@ docker compose exec airflow-webserver airflow dags backfill \
 | DAG Syntax & Load | `python airflow/dags/lakehouse_pipeline.py` | ✅ Clean import & valid graph |
 | Full Pipeline Run | Airflow Webserver manual trigger | ✅ 10/10 tasks PASS end-to-end |
 | Quality Gate Halting | Injected deliberate quality gate failure | ✅ Upstream failed status propagated, downstream halted |
-| Automatic Retry Crash Recovery | Injected `SIMULATE_CRASH_AFTER_MERGE=true` | ✅ Retry attempt succeeded with 0 duplicates |
+| Automatic Retry Crash Recovery | Manual injection: `SIMULATE_CRASH_AFTER_MERGE=true` | ⏳ Not yet covered by an automated test |
 | Failure Notification | Callback trigger | ✅ Slack webhook dispatched + email fallback ready |
 | dbt Mart Test Suite | `dbt test` within DAG execution | ✅ 83/83 PASS — 0 ERR, 0 WARN |
 

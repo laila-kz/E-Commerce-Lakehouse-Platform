@@ -96,7 +96,7 @@ make test-dbt
 ---
 
 ### ⚖️ Step 5: Cross-Layer Reconciliation Suite
-**Talking Point:** *"To prove zero data loss across multi-engine boundaries, our reconciliation runner checks row parity and revenue conservation between Silver Delta and DuckDB Marts."*
+**Talking Point:** *"To check for data loss across multi-engine boundaries, our reconciliation runner compares row parity and revenue conservation between Silver Delta and DuckDB Marts."*
 
 ```bash
 python checks/run_reconciliation.py

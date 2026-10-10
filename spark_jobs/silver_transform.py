@@ -564,7 +564,9 @@ def read_latest_version(spark, silver_path):
 def verify_merge_success(spark, silver_path, expected_rows, logger, version_before=None):
     """
     Verify the last write/MERGE succeeded by checking DESCRIBE HISTORY.
-    Returns: dict with verification results.
+    Returns: dict with verification results. Reports verified=False when the
+    observed insert count differs from the expected count; a re-run that inserts
+    0 new keys is accepted as a no-op. Covered by tests/test_silver_dedup.py.
 
     Delta skips no-op commits by default (spark.databricks.delta.skipRecordingEmptyCommits),
     so a MERGE that inserts 0 rows leaves the history unchanged. When version_before is

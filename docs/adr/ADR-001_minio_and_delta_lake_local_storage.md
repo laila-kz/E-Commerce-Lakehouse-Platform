@@ -25,7 +25,7 @@ We chose **MinIO** as our local S3-compatible object storage layer and **Delta L
 - **Positive:**
   - Full parity with AWS S3 API semantics at zero cloud cost.
   - Native ACID transactions, schema enforcement, and time-travel querying (`DESCRIBE HISTORY`, `VERSION AS OF`).
-  - Idempotent `MERGE` operations enable crash-safe incremental processing.
+  - Idempotent `MERGE` operations enable incremental reprocessing that inserts 0 rows for an already-merged batch.
 - **Negative:**
   - Requires S3A connector JARs (`hadoop-aws`, `aws-java-sdk-bundle`) in the Spark classpath, increasing container build size.
   - Multi-part upload and S3 eventual consistency patterns must be handled cleanly via configuration.

@@ -264,7 +264,7 @@ make run-demo
 
 ## 🧪 Crash-Safety & Failure-Injection Test (Interview Showcase)
 
-To demonstrate how the platform recovers from a crash without losing or duplicating data:
+To demonstrate the intended crash-recovery behavior (this is a manual procedure; no automated failure-injection test exists yet):
 
 ```bash
 # 1. Simulate a worker crash right after Silver MERGE (before watermark advances)
@@ -273,7 +273,7 @@ docker compose exec spark bash -c "SIMULATE_CRASH_AFTER_MERGE=true /opt/spark/bi
 
 # 2. Trigger automatic recovery retry
 make run-silver
-# -> Job re-reads prior watermark, applies SHA-256 deduplication, and succeeds with ZERO duplicate rows!
+# -> Job re-reads prior watermark and re-runs the MERGE; re-inserting an already-merged batch adds 0 rows (SHA-256 event_key match)
 
 # 3. Verify reconciliation still reports 0 drift
 python checks/run_reconciliation.py
