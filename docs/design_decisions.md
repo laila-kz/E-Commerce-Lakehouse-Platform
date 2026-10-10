@@ -834,9 +834,17 @@ All tasks run inside the Airflow container (`cwd` = working dir). Spark tasks sh
 | `dbt_test_gate` | airflow | `dbt test --profiles-dir .` | `/opt/airflow/project/dbt` | N/A |
 
 ### 4. Task Configuration (Retries, Backoff & Timeouts)
-Retries are uniform across all tasks via DAG `default_args`: `retries=3`, `retry_delay=2 minutes`, `retry_exponential_backoff=True`. Per-task `execution_timeout` is set individually: ingestion 10m; Bronze/Silver transforms 25m; quality gates 15m; dbt layer builds 15m; `dbt_test_gate` 10m.
+Every task sets `execution_timeout` individually: ingestion 10m; Bronze/Silver transforms 25m; quality gates 15m; dbt layer builds 15m; `dbt_test_gate` 10m. Retry/backoff is tuned **per task group**, overriding the DAG `default_args` baseline (`retries=3`, `retry_delay=2m`, `retry_exponential_backoff=True`, `max_retry_delay=15m`):
 
-_Per-category retry/backoff tuning is planned (Step 7)._
+| Task Group | Tasks | `retries` | `retry_delay` | `retry_exponential_backoff` | `max_retry_delay` |
+|---|---|---|---|---|---|
+| Ingestion | `ingest_raw` | 4 | 1m | yes | 8m |
+| Spark transforms | `bronze_transform`, `silver_transform` | 2 | 3m | yes | 15m |
+| Quality gates | `bronze_quality_gate`, `silver_quality_gate` | 1 | 1m | no | — |
+| dbt builds | `dbt_run_staging`, `dbt_run_intermediate`, `dbt_run_dims_facts`, `dbt_run_marts` | 2 | 2m | yes | 10m |
+| dbt test gate | `dbt_test_gate` | 0 | — | no | — |
+
+External/network ingestion retries most; data-quality gates and the dbt test gate retry little because their failures reflect bad data rather than transient faults. These retry values are declared in the DAG and are not yet verified by a live Airflow run (scheduler-level behavior is Step 10).
 
 ### 5. Failure Notification Specification (Dual Alerting: Slack Primary + Email Fallback)
 - **Callback Hook:** `on_failure_callback` defined on DAG `default_args` (triggers strictly on final attempt failure after retries are exhausted).

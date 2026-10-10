@@ -4,6 +4,7 @@ Runs: Ingestion -> Bronze Stage (Transform + Gate) -> Silver Stage (Transform + 
       -> dbt Warehouse Stage (Staging -> Core -> Marts) -> dbt Test Gate
 """
 
+import logging
 import sys
 from datetime import datetime, timedelta
 
@@ -11,11 +12,19 @@ from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.utils.task_group import TaskGroup
 
+logger = logging.getLogger(__name__)
+
 # Import custom failure callback plugin
 sys.path.append('/opt/airflow/plugins')
 try:
     from slack_alert import slack_alert_on_failure
 except ImportError:
+    logger.warning(
+        "slack_alert plugin not importable from /opt/airflow/plugins; "
+        "on_failure_callback is a no-op and Slack/email failure alerts are disabled. "
+        "Ensure airflow/plugins/slack_alert.py is mounted to enable alerts."
+    )
+
     def slack_alert_on_failure(context):
         pass
 
@@ -31,7 +40,42 @@ default_args = {
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
     'retry_exponential_backoff': True,
+    'max_retry_delay': timedelta(minutes=15),
     'on_failure_callback': slack_alert_on_failure,
+}
+
+# Per-group retry / backoff matrix (overrides default_args per task).
+# External/network stages retry more; data-quality and test gates retry little
+# because their failures are not transient.
+RETRY_POLICY = {
+    "ingest": {
+        "retries": 4,
+        "retry_delay": timedelta(minutes=1),
+        "retry_exponential_backoff": True,
+        "max_retry_delay": timedelta(minutes=8),
+    },
+    "spark_transform": {
+        "retries": 2,
+        "retry_delay": timedelta(minutes=3),
+        "retry_exponential_backoff": True,
+        "max_retry_delay": timedelta(minutes=15),
+    },
+    "quality_gate": {
+        "retries": 1,
+        "retry_delay": timedelta(minutes=1),
+        "retry_exponential_backoff": False,
+    },
+    "dbt_build": {
+        "retries": 2,
+        "retry_delay": timedelta(minutes=2),
+        "retry_exponential_backoff": True,
+        "max_retry_delay": timedelta(minutes=10),
+    },
+    "test_gate": {
+        "retries": 0,
+        "retry_delay": timedelta(minutes=1),
+        "retry_exponential_backoff": False,
+    },
 }
 
 SPARK_SUBMIT_PREFIX = (
@@ -58,6 +102,7 @@ with DAG(
         bash_command=f'python {PROJECT_DIR}/ingestion/kaggle_ingest.py --data-dir {PROJECT_DIR}/data/demo_sample --force',
         cwd=PROJECT_DIR,
         execution_timeout=timedelta(minutes=10),
+        **RETRY_POLICY["ingest"],
     )
 
     # 2. Bronze Stage & Quality Gate Group
@@ -67,12 +112,14 @@ with DAG(
             bash_command=f'{SPARK_SUBMIT_PREFIX} /workspace/spark_jobs/bronze_transform.py',
             cwd=PROJECT_DIR,
             execution_timeout=timedelta(minutes=25),
+            **RETRY_POLICY["spark_transform"],
         )
         bronze_quality_gate = BashOperator(
             task_id='bronze_quality_gate',
             bash_command=f'{PYTHON_EXEC_PREFIX} /workspace/checks/run_quality_gate.py --layer bronze',
             cwd=PROJECT_DIR,
             execution_timeout=timedelta(minutes=15),
+            **RETRY_POLICY["quality_gate"],
         )
         bronze_transform >> bronze_quality_gate
 
@@ -83,12 +130,14 @@ with DAG(
             bash_command=f'{SPARK_SUBMIT_PREFIX} /workspace/spark_jobs/silver_transform.py --batch-id {{{{ run_id }}}}',
             cwd=PROJECT_DIR,
             execution_timeout=timedelta(minutes=25),
+            **RETRY_POLICY["spark_transform"],
         )
         silver_quality_gate = BashOperator(
             task_id='silver_quality_gate',
             bash_command=f'{PYTHON_EXEC_PREFIX} /workspace/checks/run_quality_gate.py --layer silver',
             cwd=PROJECT_DIR,
             execution_timeout=timedelta(minutes=15),
+            **RETRY_POLICY["quality_gate"],
         )
         silver_transform >> silver_quality_gate
 
@@ -99,24 +148,28 @@ with DAG(
             bash_command='dbt run --select staging --profiles-dir .',
             cwd=DBT_DIR,
             execution_timeout=timedelta(minutes=15),
+            **RETRY_POLICY["dbt_build"],
         )
         dbt_run_intermediate = BashOperator(
             task_id='dbt_run_intermediate',
             bash_command='dbt run --select intermediate --profiles-dir .',
             cwd=DBT_DIR,
             execution_timeout=timedelta(minutes=15),
+            **RETRY_POLICY["dbt_build"],
         )
         dbt_run_dims_facts = BashOperator(
             task_id='dbt_run_dims_facts',
             bash_command='dbt run --select core --profiles-dir .',
             cwd=DBT_DIR,
             execution_timeout=timedelta(minutes=15),
+            **RETRY_POLICY["dbt_build"],
         )
         dbt_run_marts = BashOperator(
             task_id='dbt_run_marts',
             bash_command='dbt run --select marts --profiles-dir .',
             cwd=DBT_DIR,
             execution_timeout=timedelta(minutes=15),
+            **RETRY_POLICY["dbt_build"],
         )
         dbt_run_staging >> dbt_run_intermediate >> dbt_run_dims_facts >> dbt_run_marts
 
@@ -126,6 +179,7 @@ with DAG(
         bash_command='dbt test --profiles-dir .',
         cwd=DBT_DIR,
         execution_timeout=timedelta(minutes=10),
+        **RETRY_POLICY["test_gate"],
     )
 
     # Clean Pipeline Orchestration Flow
