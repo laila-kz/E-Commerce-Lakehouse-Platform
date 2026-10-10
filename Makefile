@@ -57,12 +57,12 @@ run-ingest:
 
 build-scala-extension:
 	@echo "--> Building Scala Spark Catalyst Optimizer Extension..."
-	docker run --rm -v "$$(pwd)/extensions/catalyst_optimizer:/app" -v sbt_coursier_cache:/root/.cache -v sbt_ivy_cache:/root/.ivy2 -w /app sbtscala/scala-sbt:eclipse-temurin-17.0.4_1.7.2_2.12.17 sbt clean assembly
+	docker run --rm -v "$$(pwd)/extensions/catalyst_optimizer:/app" -v sbt_coursier_cache:/root/.cache -v sbt_ivy_cache:/root/.ivy2 -w /app sbtscala/scala-sbt:eclipse-temurin-17.0.4_1.7.2_2.12.18 sbt clean assembly
 	cp extensions/catalyst_optimizer/target/scala-2.12/ecommerce-catalyst-optimizer-assembly-1.0.0.jar ./jars/
 
 test-scala-extension:
 	@echo "--> Running ScalaTest suite for Catalyst Optimizer..."
-	docker run --rm -v "$$(pwd)/extensions/catalyst_optimizer:/app" -v sbt_coursier_cache:/root/.cache -v sbt_ivy_cache:/root/.ivy2 -w /app sbtscala/scala-sbt:eclipse-temurin-17.0.4_1.7.2_2.12.17 sbt test
+	docker run --rm -v "$$(pwd)/extensions/catalyst_optimizer:/app" -v sbt_coursier_cache:/root/.cache -v sbt_ivy_cache:/root/.ivy2 -w /app sbtscala/scala-sbt:eclipse-temurin-17.0.4_1.7.2_2.12.18 sbt test
 
 run-bronze:
 	docker compose exec spark /opt/spark/bin/spark-submit --driver-memory 2g --executor-memory 2g --jars /opt/spark/jars-extra/*.jar --conf spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension,org.lakehouse.optimizer.EcommerceSparkExtensions --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog /workspace/spark_jobs/bronze_transform.py

@@ -89,7 +89,7 @@ libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-core" % sparkVersion % "provided",
   "org.apache.spark" %% "spark-sql"  % sparkVersion % "provided",
   "org.apache.spark" %% "spark-catalyst" % sparkVersion % "provided",
-  "io.delta"         %% "delta-spark" % "3.0.0" % "provided",
+  "io.delta"         %% "delta-spark" % "3.1.0" % "provided",
   "org.scalatest"    %% "scalatest"  % "3.2.17" % Test
 )
 
@@ -221,7 +221,7 @@ spark = (
     SparkSession.builder
     .appName("EcommerceLakehousePipeline")
     # 1. Include the custom compiled extension JAR alongside Delta Lake
-    .config("spark.jars", "/opt/spark/jars/delta-spark_2.12-3.0.0.jar,/opt/spark/jars/ecommerce-catalyst-optimizer-assembly-1.0.0.jar")
+    .config("spark.jars", "/opt/spark/jars/delta-spark_2.12-3.1.0.jar,/opt/spark/jars/ecommerce-catalyst-optimizer-assembly-1.0.0.jar")
     # 2. Register both Delta and our Custom Scala Extension classes
     .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension,org.lakehouse.optimizer.EcommerceSparkExtensions")
     # 3. Standard S3/MinIO & Delta configs
