@@ -69,14 +69,20 @@ class DynamicEcommercePartitionPrunerSuite extends AnyFunSuite {
 
     val rows = boundaryTimestamps.map(ts => InternalRow(DateTimeUtils.fromJavaTimestamp(ts)))
 
-    def selectedWith(condition: Expression): Seq[Timestamp] = {
+    // The rule runs on an analyzed plan, so timezone-aware expressions already carry a zone.
+    // These test predicates are unanalyzed, so resolve the session zone first (what ResolveTimeZone does).
+    val zone = java.util.TimeZone.getDefault.getID
+    def selectWith(condition: Expression): Seq[Timestamp] = {
       val bound = BindReferences.bindReference(condition, Seq(attr))
+      val resolved = bound.transformUp {
+        case tz: TimeZoneAwareExpression => tz.withTimeZone(zone)
+      }
       rows.zip(boundaryTimestamps)
-        .collect { case (row, ts) if bound.eval(row).asInstanceOf[Boolean] => ts }
+        .collect { case (row, ts) if resolved.eval(row).asInstanceOf[Boolean] => ts }
     }
 
-    val originalRows = selectedWith(original)
-    val rewrittenRows = selectedWith(rewritten)
+    val originalRows = selectWith(original)
+    val rewrittenRows = selectWith(rewritten)
 
     // Rule enabled vs disabled must return the same rows.
     assert(rewrittenRows == originalRows)
