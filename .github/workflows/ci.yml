@@ -2,9 +2,8 @@ name: CI Data Pipeline & Quality Gate
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, audit-remediation ]
   pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 # Required for GitHub Pages deployment
@@ -35,6 +34,22 @@ jobs:
         run: |
           flake8 .
 
+  python-syntax:
+    name: 🧩 Python Syntax Check (compileall)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Compile every Python source tree
+        run: |
+          python -m compileall -q ingestion spark_jobs checks contracts scripts airflow soda tests
+
   dbt-check:
     name: 📊 dbt Parse & Compile (DuckDB)
     runs-on: ubuntu-latest
@@ -58,8 +73,8 @@ jobs:
           dbt parse --profiles-dir .
           dbt compile --profiles-dir .
 
-  quality-gate-check:
-    name: 🛡️ Pipeline Integrity & Script Validation
+  unit-tests:
+    name: 📜 Contract, Reconciliation & Ingest Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -70,43 +85,69 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Verify Python Script Compilation
-        run: |
-          python -m py_compile checks/run_quality_gate.py
-          python -m py_compile ingestion/kaggle_ingest.py
-          python -m py_compile spark_jobs/bronze_transform.py
-          python -m py_compile spark_jobs/silver_transform.py
-          python -m py_compile airflow/plugins/slack_alert.py
-          python -m py_compile airflow/dags/lakehouse_pipeline.py
-
-  test-contract-and-reconciliation:
-    name: 📜 Contract Gate & Reconciliation Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install contract/reconciliation dependencies
+      - name: Install unit-test dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pyyaml duckdb pytest
+          pip install pyyaml duckdb pytest boto3 tenacity
 
-      - name: Run contract & reconciliation tests
+      - name: Run contract, reconciliation & ingest tests
         run: |
-          python -m pytest tests/test_contract_cli.py tests/test_reconciliation.py -q
+          python -m pytest tests/test_contract_cli.py tests/test_reconciliation.py tests/test_ingest_marker.py -q
+
+  spark-tests:
+    name: ⚡ Spark & Delta Recovery Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Spark, Delta and pytest
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyspark==3.5.0 delta-spark==3.1.0 pytest duckdb pyyaml boto3 tenacity
+
+      - name: Run Silver dedup, MERGE & crash-recovery tests
+        run: |
+          python -m pytest tests/test_silver_dedup.py tests/test_failure_recovery_silver.py -q
+
+  scala-tests:
+    name: 🔧 Scala Catalyst Extension Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up sbt
+        uses: sbt/setup-sbt@v1
+
+      - name: Run Scala extension tests
+        working-directory: ./extensions/catalyst_optimizer
+        run: sbt test
 
   # ── 3D Lineage Graph → GitHub Pages ─────────────────────────────────────
   publish-lineage-graph:
     name: 🌐 Build & Publish 3D Lineage Graph
     runs-on: ubuntu-latest
-    # Only deploy on pushes to main (not on PRs)
-    if: github.event_name != 'pull_request'
-    needs: [ dbt-check, quality-gate-check, test-contract-and-reconciliation ]
+    # Deploy only from main, never from pull requests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [ lint-code, python-syntax, dbt-check, unit-tests, spark-tests, scala-tests ]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4

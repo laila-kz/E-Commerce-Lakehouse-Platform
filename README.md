@@ -1,6 +1,6 @@
 # 🏛️ E-Commerce Lakehouse Platform
 
-[![CI/CD Pipeline](https://github.com/laila-kz/DataLakeHouse_project2-/actions/workflows/ci.yml/badge.svg)](https://github.com/laila-kz/DataLakeHouse_project2-/actions/workflows/ci.yml)
+[![CI/CD Pipeline](https://github.com/laila-kz/E-Commerce-Lakehouse-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/laila-kz/E-Commerce-Lakehouse-Platform/actions/workflows/ci.yml)
 [![Delta Lake](https://img.shields.io/badge/Delta_Lake-00ADD8?style=flat&logo=apachespark&logoColor=white)](https://delta.io/)
 [![dbt](https://img.shields.io/badge/dbt-FF694B?style=flat&logo=dbt&logoColor=white)](https://www.getdbt.com/)
 [![DuckDB](https://img.shields.io/badge/DuckDB-FFF000?style=flat&logo=duckdb&logoColor=black)](https://duckdb.org/)
@@ -191,6 +191,28 @@ make run-benchmarks
 
 ---
 
+## 🔄 Continuous Integration
+
+A single workflow, [`.github/workflows/ci.yml`](.github/workflows/ci.yml), runs on every push to `main` and `audit-remediation` and on every pull request. Its jobs are:
+
+| Job | What it verifies |
+|---|---|
+| `lint-code` | `flake8 .` against the repository (config in `.flake8`). |
+| `python-syntax` | `python -m compileall` over `ingestion`, `spark_jobs`, `checks`, `contracts`, `scripts`, `airflow`, `soda` and `tests`. |
+| `dbt-check` | `dbt parse` + `dbt compile` for the DuckDB Gold models. |
+| `unit-tests` | Contract-gate, reconciliation and ingest-marker tests (`tests/test_contract_cli.py`, `tests/test_reconciliation.py`, `tests/test_ingest_marker.py`). No Spark required. |
+| `spark-tests` | Spark 3.5.0 + Delta 3.1.0 dedup/MERGE idempotency and crash-recovery tests (`tests/test_silver_dedup.py`, `tests/test_failure_recovery_silver.py`). |
+| `scala-tests` | `sbt test` for the Catalyst partition-pruner rule (`extensions/catalyst_optimizer`). |
+| `publish-lineage-graph` | Main branch only: regenerates `docs/graph_data.json` and deploys the 3D lineage graph to GitHub Pages. |
+
+**Not covered by CI** (verified locally until a Step 10 runtime pass):
+
+- A full `docker-compose` end-to-end run (Airflow → MinIO → Spark → dbt). The DAG is checked structurally and its tasks are unit-tested, but the orchestrated pipeline is not executed in CI.
+- The 84 dbt tests (`make test-dbt`), which need populated DuckDB/MinIO tables; `dbt-check` only parses and compiles models.
+- The OpenLineage emitter output against a live Marquez, and the (not-yet-implemented) Spark listener and dbt integration.
+
+---
+
 ## 🛡️ Reliability, Contracts & Crash-Recovery Matrix
 
 ### 1. Shift-Left YAML Data Contracts (`contract_cli.py`)
@@ -202,7 +224,7 @@ Schema changes are evaluated prior to ingestion:
 The contract gate is a standalone CLI today: `contract_cli.py` validates local CSV files and isn't called by the Airflow DAG (invoke it via `make test-contracts`). It does not yet post a schema diff to Slack (only breaking-validation alerts) and it is not wired into the pipeline.
 
 ### 2. Failure-Injection Recovery Matrix
-Three of the four boundaries are now backed by automated tests (run in CI via `.github/workflows/silver-tests.yml`); the dbt row remains designed behavior without a test. The ingest and Silver crash hooks are default-off, so normal runs are unaffected.
+Three of the four boundaries are now backed by automated tests (run in CI via `.github/workflows/ci.yml`); the dbt row remains designed behavior without a test. The ingest and Silver crash hooks are default-off, so normal runs are unaffected.
 
 | Boundary | Instrumented? | Expected Behavior | Recovery Action | Status |
 |---|---|---|---|---|
