@@ -691,6 +691,29 @@ def advance_watermark(spark, silver_path, batch_df, batch_id, logger):
     )
 
 
+def maybe_inject_crash_after_merge(logger, batch_id):
+    """
+    Testing-only hook. When any crash-injection flag is "true", raise after the
+    MERGE is committed and verified but before the watermark is advanced, so
+    recovery (watermark unchanged, idempotent replay) can be exercised. Default off.
+    Covered by tests/test_failure_recovery_silver.py.
+    """
+    if (
+        os.environ.get("SIMULATE_CRASH_AFTER_MERGE") == "true"
+        or os.environ.get("FAIL_AFTER_SILVER_MERGE") == "true"
+        or os.environ.get("FAIL_BEFORE_WATERMARK_UPDATE") == "true"
+    ):
+        logger.warning(
+            "SIMULATED CRASH triggered: MERGE verified, halting before watermark advance",
+            extra={
+                "event": "simulated_crash",
+                "location": "after_silver_merge_before_watermark",
+                "batch_id": batch_id,
+            }
+        )
+        raise RuntimeError("Simulated crash: MERGE committed, watermark NOT advanced")
+
+
 def main():
     args = parse_args()
     logger = setup_logging()
@@ -761,22 +784,10 @@ def main():
             raise RuntimeError("MERGE verification failed")
 
         # ****************************************************
-        # ===== SIMULATED CRASH INJECTION POINTS =====
-        # Named failure test matrix hooks for failure-injection testing
-        if (
-            os.environ.get("SIMULATE_CRASH_AFTER_MERGE") == "true"
-            or os.environ.get("FAIL_AFTER_SILVER_MERGE") == "true"
-            or os.environ.get("FAIL_BEFORE_WATERMARK_UPDATE") == "true"
-        ):
-            logger.warning(
-                "SIMULATED CRASH triggered: MERGE verified, halting before watermark advance",
-                extra={
-                    "event": "simulated_crash",
-                    "location": "after_silver_merge_before_watermark",
-                    "batch_id": args.batch_id,
-                }
-            )
-            raise RuntimeError("Simulated crash: MERGE committed, watermark NOT advanced")
+        # ===== SIMULATED CRASH INJECTION POINT =====
+        # MERGE verified; optionally halt before the watermark advance so the
+        # crash-recovery boundary can be exercised (default off).
+        maybe_inject_crash_after_merge(logger, args.batch_id)
         # ****************************************************
 
         # Advance watermark ONLY in incremental mode

@@ -46,12 +46,12 @@ Four sequential stages. Each stage should be fully closed out (README/tags updat
 - [x] **Platform Observability Metrics**
   - [x] Populate `pipeline_metrics` table per run: input/output row counts, quarantined count, duplicate count, null %, min/max event time, processing duration, throughput (rows/sec), watermark lag, late-event count.
 - [ ] **Formal Failure-Injection Test Matrix**
-  - [ ] Only the Silver post-MERGE boundary is instrumented today (`SIMULATE_CRASH_AFTER_MERGE` / `FAIL_AFTER_SILVER_MERGE` / `FAIL_BEFORE_WATERMARK_UPDATE`); instrument the remaining boundaries.
-  - [ ] For each boundary: verify no lost/duplicated rows and correct watermark state.
-  - [ ] Publish a verified pass/fail matrix in README under "Reliability, Contracts & Crash-Recovery Matrix" (currently states designed behavior only for the uninstrumented boundaries).
+  - [x] Instrument the Raw ingest boundary (`FAIL_AFTER_INGEST_UPLOAD`, default off) alongside the existing Silver post-MERGE hook (`SIMULATE_CRASH_AFTER_MERGE` / `FAIL_AFTER_SILVER_MERGE` / `FAIL_BEFORE_WATERMARK_UPDATE`). Bronze/dbt crash boundaries remain designed-only.
+  - [x] Automated tests: `tests/test_ingest_marker.py` (marker written last; crash leaves no marker; forced re-run overwrites) and `tests/test_failure_recovery_silver.py` (crash → watermark unchanged → re-run 0 inserts → watermark advances; gate exit code; DAG orders Bronze gate before Silver).
+  - [x] README "Reliability, Contracts & Crash-Recovery Matrix" marks which rows are test-backed vs designed-only.
 - [x] Write ADR-005 (Late Data & Partition Rebuild Strategy).
 
-**Stage 2 exit criteria:** Reconciliation checks exist; the failure-injection matrix is partial — only the Silver post-MERGE boundary is instrumented, the rest are documented designed behavior. (PARTIAL)
+**Stage 2 exit criteria:** Reconciliation checks exist; the failure-injection matrix is partial — the Raw ingest marker, the Silver post-MERGE boundary, and the Bronze-gate halt are instrumented and test-backed, while Bronze write crashes and dbt mid-build failures remain documented designed behavior. (PARTIAL)
 
 ---
 

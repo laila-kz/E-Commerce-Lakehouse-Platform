@@ -894,7 +894,7 @@ docker compose exec airflow-webserver airflow dags backfill \
 | DAG Syntax & Load | `python airflow/dags/lakehouse_pipeline.py` | ✅ Clean import & valid graph |
 | Full Pipeline Run | Airflow Webserver manual trigger | ✅ 10/10 tasks PASS end-to-end |
 | Quality Gate Halting | Injected deliberate quality gate failure | ✅ Upstream failed status propagated, downstream halted |
-| Automatic Retry Crash Recovery | Manual injection: `SIMULATE_CRASH_AFTER_MERGE=true` | ⏳ Not yet covered by an automated test |
+| Automatic Retry Crash Recovery | Manual injection: `SIMULATE_CRASH_AFTER_MERGE=true` | ✅ Now covered by `tests/test_failure_recovery_silver.py` (crash → watermark unchanged → re-run inserts 0 rows → watermark advances) |
 | Failure Notification | Callback trigger | ✅ Slack webhook dispatched + email fallback ready |
 | dbt Mart Test Suite | `dbt test` within DAG execution | ✅ 84/84 PASS — 0 ERR, 0 WARN |
 

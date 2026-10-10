@@ -202,16 +202,16 @@ Schema changes are evaluated prior to ingestion:
 The contract gate is a standalone CLI today: `contract_cli.py` validates local CSV files and isn't called by the Airflow DAG (invoke it via `make test-contracts`). It does not yet post a schema diff to Slack (only breaking-validation alerts) and it is not wired into the pipeline.
 
 ### 2. Failure-Injection Recovery Matrix
-Only the Silver post-MERGE boundary is instrumented. The other rows describe designed behavior: they are **not instrumented** and have no automated test.
+Three of the four boundaries are now backed by automated tests (run in CI via `.github/workflows/silver-tests.yml`); the dbt row remains designed behavior without a test. The ingest and Silver crash hooks are default-off, so normal runs are unaffected.
 
 | Boundary | Instrumented? | Expected Behavior | Recovery Action | Status |
 |---|---|---|---|---|
-| Raw ingest | No | Incomplete upload is replaced on re-run (idempotent `_SUCCESS` marker check) | Re-run ingestion | Designed behavior, not instrumented |
-| Bronze write / gate | No | Downstream Silver halts via gate failure | Re-run Soda gate | Designed behavior, not instrumented |
-| Silver post-MERGE, pre-watermark | Yes — `SIMULATE_CRASH_AFTER_MERGE` / `FAIL_AFTER_SILVER_MERGE` / `FAIL_BEFORE_WATERMARK_UPDATE` (three aliases of one injection point, `spark_jobs/silver_transform.py`) | Watermark stays at the prior timestamp; a re-run re-MERGEs the same batch | `make run-silver` | Re-running an already-merged batch inserts 0 rows; duplicate keys inside a batch are collapsed deterministically (earliest `ingested_at`, then `source_file`) before the write |
-| dbt build | No | Target tables remain consistent (atomic swap) | Re-run dbt | Designed behavior, not instrumented |
+| Raw ingest | Yes — `FAIL_AFTER_INGEST_UPLOAD` (default off, `ingestion/kaggle_ingest.py`) | Uploads complete but the `_SUCCESS` marker is not written | Re-run ingestion | Test-backed by `tests/test_ingest_marker.py`: the marker is written last, a pre-marker crash leaves no marker, and `--force` overwrites it |
+| Bronze write / gate | Gate exit code tested; Bronze write crash not injected | A non-zero quality-gate exit halts Silver via DAG ordering | Re-run Soda gate | Test-backed by `tests/test_failure_recovery_silver.py`: the gate exit code is non-zero when any suite fails, and the DAG graph places `bronze_quality_gate` upstream of `silver_transform` |
+| Silver post-MERGE, pre-watermark | Yes — `SIMULATE_CRASH_AFTER_MERGE` / `FAIL_AFTER_SILVER_MERGE` / `FAIL_BEFORE_WATERMARK_UPDATE` (three aliases of one injection point, `spark_jobs/silver_transform.py`) | Watermark stays at the prior timestamp; a re-run re-MERGEs the same batch | `make run-silver` | Test-backed by `tests/test_failure_recovery_silver.py`: crash → watermark unchanged → re-run inserts 0 rows → watermark advances. Re-run idempotency also covered by `tests/test_silver_dedup.py` |
+| dbt build | No | Target tables remain consistent (atomic swap) | Re-run dbt | Designed behavior, not verified (requires a dbt + DuckDB runtime) |
 
-_The single instrumented boundary is exercised manually via the runbook (`docs/EXECUTION_AND_RUNBOOK_GUIDE.md`); its re-run idempotency and within-batch key collapse are covered by `tests/test_silver_dedup.py`, run in CI._
+_The ingest-marker and Silver MERGE-to-watermark boundaries are covered by automated tests (`tests/test_ingest_marker.py`, `tests/test_failure_recovery_silver.py`); the Bronze-gate halt is covered by the gate exit-code and DAG-ordering tests, while a Bronze write crash and dbt mid-build failure remain designed but untested._
 
 ### 3. Airflow Orchestration (`airflow/dags/lakehouse_pipeline.py`)
 Retries are tuned per task group rather than uniform: `ingest_raw` retries 4× with 1m exponential backoff (cap 8m); `bronze_transform`/`silver_transform` retry 2× at 3m (cap 15m); the Soda quality gates retry 1× at 1m with no backoff; the four dbt build tasks retry 2× at 2m (cap 10m); `dbt_test_gate` retries 0×. Each task keeps its own `execution_timeout`. If the `slack_alert` plugin cannot be imported, the DAG logs a warning and the failure callback becomes a no-op, so a missing plugin is visible in the scheduler log instead of failing silently. Spark tasks are launched with `--jars /opt/spark/jars-extra/*.jar` and `spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension,org.lakehouse.optimizer.EcommerceSparkExtensions`, passing the custom Catalyst partition-pruner rule to Airflow-launched Spark jobs (configured, not verified at runtime).

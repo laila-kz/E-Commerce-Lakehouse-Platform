@@ -351,6 +351,29 @@ def upload_files_to_minio(s3_client, data_dir, bucket="raw", prefix="ecommerce_e
 
 
 # ============================================================================
+# FAILURE-INJECTION HOOK (testing only, default off)
+# ============================================================================
+
+def maybe_inject_upload_failure(logger):
+    """
+    Testing-only hook. When FAIL_AFTER_INGEST_UPLOAD is "true", raise after files
+    are uploaded but before the _SUCCESS marker is written, to exercise crash
+    recovery at the ingest-marker boundary. Default off; no effect in normal runs.
+    """
+    if os.environ.get("FAIL_AFTER_INGEST_UPLOAD", "false").lower() == "true":
+        logger.warning(
+            "SIMULATED CRASH triggered: upload complete, halting before _SUCCESS marker",
+            extra={
+                "event": "simulated_ingest_crash",
+                "location": "after_upload_before_marker",
+            }
+        )
+        raise RuntimeError(
+            "Simulated crash: upload complete, _SUCCESS marker NOT written"
+        )
+
+
+# ============================================================================
 # MAIN FUNCTION
 # ============================================================================
 
@@ -421,6 +444,9 @@ def main():
     if not upload_result["uploaded"]:
         logger.error("Upload failed, exiting")
         sys.exit(1)
+
+    # ===== Failure-injection hook (default off) =====
+    maybe_inject_upload_failure(logger)
 
     # ===== Write Success Marker to MinIO =====
     write_marker_minio(
