@@ -923,7 +923,7 @@ The continuous integration pipeline automates code quality, linting, dbt model c
 ### 1. Part A: Data Contract Enforcement & Schema Registry (`contracts/`)
 - **YAML Contract Definition (`contracts/schemas/ecommerce_events_v1.yml`)**: Enforces explicit dataset metadata, column data types, required fields (`event_time`, `event_type`, `product_id`, `user_id`, `user_session`), enum value restrictions (`view`, `cart`, `remove_from_cart`, `purchase`), price boundaries (`price >= 0.0`), and nullability thresholds.
 - **Contract CLI Engine (`contracts/contract_cli.py`)**: CLI validation runner inspecting incoming raw clickstream batches. 
-- **Quarantine & Alerting Routing**: Valid batches pass with exit code `0`. Violating batches fail with exit code `1`, get automatically moved to the quarantine path (`./data/quarantine/` or `s3a://raw/quarantine/`), generate structured violation logs (`logs/contract_violation_*.json`), and dispatch Slack Webhook alerts containing structural schema diffs.
+- **Quarantine & Alerting Routing**: Valid batches pass with exit code `0`. Violating batches fail with exit code `1`, write a structured violation JSON (`data/quarantine/quarantine_<ts>_<file>.json`), and attempt a breaking-batch Slack alert (no-op with a logged warning when `SLACK_WEBHOOK_URL` is unset). The registry stores the real computed status (`VALID` / `VIOLATIONS_FOUND`). Schema-diff classification (`COMPATIBLE` / `WARNING` / `BREAKING`) is produced by the separate `diff` sub-command and is not posted to Slack.
 
 ### 2. Part B: PySpark & Spark SQL Query Optimization Suite (`spark_jobs/`)
 - **Optimization Harness (`spark_jobs/spark_benchmark.py`)**: Evaluates performance across three core distributed computing dimensions:

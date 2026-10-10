@@ -44,7 +44,7 @@ python scripts/replay_events.py --start-date 2019-10-01 --end-date 2019-10-05 --
 **Talking Point:** *"Before any data enters our lakehouse, we enforce strict shift-left Data Contracts using a custom CLI engine (`contract_cli.py`) to prevent upstream schema drift from breaking downstream models."*
 
 ```bash
-# 1A. Test backward-compatibility between v1 and v2 contracts -> [COMPATIBLE]
+# 1A. Test backward-compatibility between v1 and v2 contracts -> [WARNING] (optional cols, no defaults)
 python contracts/contract_cli.py diff \
   --old-contract contracts/schemas/ecommerce_events_v1.yml \
   --new-contract contracts/schemas/ecommerce_events_v2.yml

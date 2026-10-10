@@ -26,7 +26,7 @@ graph TD
     subgraph Ingestion & Storage ["1. Storage & Ingestion"]
         A[Kaggle API / Source CSVs] -->|contract_cli.py| C{Contract Gate}
         C -->|Valid| B[(MinIO: s3a://raw)]
-        C -->|Breaking Schema| Q[(s3a://raw/quarantine/)]
+        C -->|Breaking Schema| Q[("data/quarantine/ (local)")]
         B -->|schema enforcement| D[bronze_transform.py]
     end
 
@@ -195,11 +195,11 @@ make run-benchmarks
 
 ### 1. Shift-Left YAML Data Contracts (`contract_cli.py`)
 Schema changes are evaluated prior to ingestion:
-- **`COMPATIBLE`** (e.g. adding nullable column): Batch passes and contract version updates.
-- **`WARNING`** (e.g. new optional column without default): Batch passes with operational alert.
-- **`BREAKING`** (e.g. column dropped, column renamed, data type change): Batch is quarantined to `s3a://raw/quarantine/` and Slack diff alert is dispatched.
+- **`COMPATIBLE`** (e.g. adding a nullable column that carries a default value): Batch and contract version pass.
+- **`WARNING`** (e.g. new optional column without a default): Batch passes; existing rows will be NULL.
+- **`BREAKING`** (e.g. column dropped, column renamed, data type change, required column added, nullability tightened): Batch is quarantined locally to `data/quarantine/` with a diagnostic JSON, and a Slack alert is attempted (no-op with a logged warning when `SLACK_WEBHOOK_URL` is unset).
 
-The contract gate is a standalone CLI today: `contract_cli.py` validates local CSV files and isn't called by the Airflow DAG (invoke it via `make test-contracts`).
+The contract gate is a standalone CLI today: `contract_cli.py` validates local CSV files and isn't called by the Airflow DAG (invoke it via `make test-contracts`). It does not yet post a schema diff to Slack (only breaking-validation alerts) and it is not wired into the pipeline.
 
 ### 2. Failure-Injection Recovery Matrix
 Only the Silver post-MERGE boundary is instrumented. The other rows describe designed behavior: they are **not instrumented** and have no automated test.
@@ -251,6 +251,6 @@ Detailed Architecture Decision Records are maintained in [`docs/adr/`](docs/adr/
 
 - *Architected a production-patterned e-commerce Data Lakehouse utilizing PySpark, Delta Lake, MinIO, and dbt on DuckDB under Apache Airflow orchestration.*
 - *Implemented incremental ingestion with SHA-256 deterministic deduplication and post-commit watermarking; re-running an already-merged batch inserts 0 rows, and duplicate keys inside a batch are collapsed deterministically before the write (`tests/test_silver_dedup.py`, run in CI).*
-- *Engineered a YAML Data Contract engine with breaking-schema classification, automated dead-letter quarantine routing, and Slack diff alerting.*
+- *Engineered a YAML Data Contract engine with breaking-schema classification, automated dead-letter quarantine routing, and breaking-batch Slack alerting (no-op when the webhook is unset).*
 - *Integrated the OpenLineage standard with Marquez for Airflow job-level lineage, with `scripts/emit_marquez_lineage.py` emitting dataset and schema facets for the Spark and dbt datasets.*
 - *Authored a suite of 84 dbt tests covering SCD Type 2 dimensions, 30-minute idle sessionization, and cohort retention invariants.*

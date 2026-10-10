@@ -65,9 +65,9 @@ Four sequential stages. Each stage should be fully closed out (README/tags updat
   - [x] Implement `--mode backfill` isolation: bypasses forward watermark advancement so historical reprocessing never corrupts or regresses production watermarks.
   - [x] Persist replay runs into `replay_audit` table (replay_id, requested_at, start_date, end_date, mode, rows_processed, rows_inserted, status).
 - [x] **Contract Versioning & Compatibility Registry**
-  - [x] Classify schema changes: `COMPATIBLE` (add nullable column), `WARNING` (add optional column with default), `BREAKING` (drop column, rename column, change data type).
+  - [x] Classify schema changes: `COMPATIBLE` (add nullable column with a default), `WARNING` (add optional column without a default), `BREAKING` (drop column, rename column, change data type, add required column, tighten nullability).
   - [x] Version contract files (`ecommerce_events_v1.yml`, `_v2.yml`); validate incoming batches before Bronze ingestion.
-  - [x] Route breaking batches to `s3://quarantine/` with error metadata instead of failing the pipeline blindly.
+  - [x] Route breaking batches to local `data/quarantine/` (contract CLI) with error metadata instead of failing the pipeline blindly; the Bronze transform quarantines malformed rows separately to `s3a://bronze/_quarantine/`.
   - [x] Schema registry table: dataset name, version, owner, effective date, compatibility status, SLA, latest validation result.
 - [x] Update README with resume bullets for backfill engine and contract compatibility registry.
 

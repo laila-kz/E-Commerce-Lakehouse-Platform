@@ -81,7 +81,7 @@ python contracts/contract_cli.py diff \
   --old-contract contracts/schemas/ecommerce_events_v1.yml \
   --new-contract contracts/schemas/ecommerce_events_v2.yml
 ```
-> **Output:** Classifies schema additions (`device_type`, `currency`) as `[COMPATIBLE]`.
+> **Output:** Classifies the schema additions (`device_type`, `currency`) as `[WARNING]` (new optional columns without defaults - existing rows become NULL).
 
 #### 1B. Validate a Clean Dataset
 ```bash
@@ -97,7 +97,7 @@ python contracts/contract_cli.py validate \
   --input-file data/test_breaking.csv \
   --contract-file contracts/schemas/ecommerce_events_v1.yml
 ```
-> **Output:** Intercepts breaking changes and routes bad records to `data/quarantine/`.
+> **Output:** Reports `[CONTRACT VIOLATION]` (missing `user_id`, invalid `event_type`, negative `price`) and writes a violation JSON to `data/quarantine/`.
 
 ---
 
