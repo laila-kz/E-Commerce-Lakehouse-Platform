@@ -1,5 +1,7 @@
 .env
-data/
+data/*
+!data/test_valid.csv
+!data/test_breaking.csv
 *.db
 *.duckdb
 __pycache__/

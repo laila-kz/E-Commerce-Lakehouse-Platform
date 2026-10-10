@@ -1,0 +1,2 @@
+event_time,event_type,product_id,category_id,category_code,brand,price,customer_id,user_session
+2024-01-01 10:00:00,invalid_event,456,100,electronics.phone,Samsung,-50.00,123,session_abc

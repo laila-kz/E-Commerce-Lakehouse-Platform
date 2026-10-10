@@ -14,6 +14,8 @@ import json
 import os
 from pathlib import Path
 import sys
+import urllib.request
+import urllib.error
 
 import duckdb
 
@@ -86,21 +88,31 @@ def init_registry_table(con):
     """)
 
 
+_SEVERITY_RANK = {"COMPATIBLE": 0, "WARNING": 1, "BREAKING": 2}
+
+
+def _worst_severity(severities):
+    return max(severities, key=lambda s: _SEVERITY_RANK[s])
+
+
 def compare_contracts(old_contract, new_contract):
     """
     Classify schema evolution into COMPATIBLE, WARNING, or BREAKING.
-    - Adding optional column: COMPATIBLE
-    - Adding required column: BREAKING
-    - Dropping column: BREAKING
-    - Changing data type: BREAKING
-    - Tightening nullability: BREAKING
+    - Adding nullable column with a default value:    COMPATIBLE
+    - Adding optional column without a default value: WARNING
+    - Adding required column:                         BREAKING
+    - Dropping column / renaming (drop+add):          BREAKING
+    - Changing data type:                             BREAKING
+    - Tightening nullability (nullable->non-nullable): BREAKING
+
+    Overall status = the worst severity reported by any single change.
     """
     old_cols = old_contract.get("columns", {})
     new_cols = new_contract.get("columns", {})
     changes = []
-    overall_status = "COMPATIBLE"
+    severities = ["COMPATIBLE"]
 
-    # Check for dropped columns or altered definitions
+    # Check for dropped/deprecated columns or altered definitions
     for col_name, old_spec in old_cols.items():
         if col_name not in new_cols:
             changes.append({
@@ -109,7 +121,7 @@ def compare_contracts(old_contract, new_contract):
                 "column": col_name,
                 "detail": f"Column '{col_name}' was removed in version {new_contract.get('version')}"
             })
-            overall_status = "BREAKING"
+            severities.append("BREAKING")
         else:
             new_spec = new_cols[col_name]
             if old_spec.get("type") != new_spec.get("type"):
@@ -119,7 +131,7 @@ def compare_contracts(old_contract, new_contract):
                     "column": col_name,
                     "detail": f"Type changed from '{old_spec.get('type')}' to '{new_spec.get('type')}'"
                 })
-                overall_status = "BREAKING"
+                severities.append("BREAKING")
             if old_spec.get("nullable", True) and not new_spec.get("nullable", True):
                 changes.append({
                     "type": "NULLABILITY_TIGHTENED",
@@ -127,74 +139,129 @@ def compare_contracts(old_contract, new_contract):
                     "column": col_name,
                     "detail": f"Column '{col_name}' became non-nullable (breaking for existing nulls)"
                 })
-                overall_status = "BREAKING"
+                severities.append("BREAKING")
 
     # Check for newly added columns
     for col_name, new_spec in new_cols.items():
-        if col_name not in old_cols:
-            if new_spec.get("required", False):
-                changes.append({
-                    "type": "REQUIRED_COLUMN_ADDED",
-                    "severity": "BREAKING",
-                    "column": col_name,
-                    "detail": f"New required column '{col_name}' added without default value"
-                })
-                overall_status = "BREAKING"
-            else:
-                changes.append({
-                    "type": "OPTIONAL_COLUMN_ADDED",
-                    "severity": "COMPATIBLE",
-                    "column": col_name,
-                    "detail": f"New optional column '{col_name}' added (backward-compatible)"
-                })
+        if col_name in old_cols:
+            continue
+        if new_spec.get("required", False):
+            changes.append({
+                "type": "REQUIRED_COLUMN_ADDED",
+                "severity": "BREAKING",
+                "column": col_name,
+                "detail": f"New required column '{col_name}' added without default value"
+            })
+            severities.append("BREAKING")
+        elif "default" in new_spec:
+            changes.append({
+                "type": "OPTIONAL_COLUMN_ADDED",
+                "severity": "COMPATIBLE",
+                "column": col_name,
+                "detail": f"New nullable column '{col_name}' added with a default value (backward-compatible)"
+            })
+        else:
+            changes.append({
+                "type": "OPTIONAL_COLUMN_ADDED_NO_DEFAULT",
+                "severity": "WARNING",
+                "column": col_name,
+                "detail": f"New optional column '{col_name}' added without a default value "
+                          f"- existing rows will be NULL (non-breaking but be aware)"
+            })
+            severities.append("WARNING")
 
-    return {"overall_status": overall_status, "changes": changes}
+    return {"overall_status": _worst_severity(severities), "changes": changes}
+
+
+_NUMERIC_TYPES = {"long", "int", "integer", "bigint", "double", "float", "decimal", "number"}
+
+
+def _trunc(value, limit=64):
+    """Truncate a raw value for diagnostics (protects against PII over-capture)."""
+    s = str(value)
+    return s if len(s) <= limit else s[:limit] + "…"
+
+
+def _coerce(value, ctype):
+    """Cast a raw CSV value to the contract-declared type (raises on mismatch)."""
+    s = value.strip()
+    if ctype in ("string", "str", "varchar"):
+        return s
+    if ctype in ("long", "int", "integer", "bigint"):
+        return int(s)
+    if ctype in ("double", "float", "decimal", "number"):
+        return float(s)
+    if ctype in ("timestamp", "datetime", "date"):
+        return datetime.fromisoformat(s.replace(" ", "T").replace("Z", "+00:00"))
+    raise ValueError(f"Unsupported contract type '{ctype}' for coercion")
 
 
 def validate_dataset(data_path, contract):
-    """Validate CSV against contract rules"""
-    violations = []
+    """Validate CSV against contract rules (headers, nullability, types, allowed
+    values, numeric bounds). Emits one violation record per (column, rule) pair
+    with a failed-row count and a truncated example value."""
     columns_spec = contract.get("columns", {})
+    violations_agg = {}
+    rows_checked = 0
+
+    def add_violation(column, rule, count=1, example=None):
+        record = violations_agg.setdefault((column, rule), {
+            "column": column,
+            "rule": rule,
+            "severity": "BREAKING",
+            "failed_rows": 0,
+            "example": None,
+        })
+        record["failed_rows"] += count
+        if example is not None and record["example"] is None:
+            record["example"] = _trunc(example)
 
     with open(data_path, "r", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         actual_headers = reader.fieldnames or []
 
-        # 1. Required Columns Check
+        # 1. Required columns must exist in the dataset header
         for col_name, spec in columns_spec.items():
             if spec.get("required", False) and col_name not in actual_headers:
-                violations.append({
-                    "rule": "missing_required_column",
-                    "severity": "BREAKING",
-                    "column": col_name,
-                    "expected": f"Column '{col_name}' present",
-                    "actual": "Column missing from dataset headers"
-                })
+                add_violation(col_name, "missing_required_column", count=0)
 
-        # 2. Row sampling validation
-        row_count = 0
-        null_counts = {col: 0 for col in columns_spec}
+        # 2. Row-level rules: nullability, types, allowed values, numeric bounds
         for row in reader:
-            row_count += 1
+            rows_checked += 1
             for col_name, spec in columns_spec.items():
-                val = row.get(col_name)
-                if not spec.get("nullable", True) and (val is None or val.strip() == ""):
-                    null_counts[col_name] += 1
+                if col_name not in actual_headers:
+                    # Entire column missing - already reported by the required-columns check.
+                    continue
+                raw = row.get(col_name)
+                if raw is None or raw.strip() == "":
+                    if not spec.get("nullable", True):
+                        add_violation(col_name, "null_in_non_nullable_column", example="")
+                    continue
+                try:
+                    coerced = _coerce(raw, spec.get("type", "string"))
+                except Exception:
+                    add_violation(col_name, "type_mismatch", example=raw)
+                    continue
+                allowed = spec.get("allowed_values")
+                if allowed and raw not in allowed:
+                    add_violation(col_name, "not_in_allowed_values", example=raw)
+                if spec.get("type", "string") in _NUMERIC_TYPES:
+                    if spec.get("min_value") is not None and coerced < spec.get("min_value"):
+                        add_violation(col_name, "below_min_value", example=raw)
+                    if spec.get("max_value") is not None and coerced > spec.get("max_value"):
+                        add_violation(col_name, "above_max_value", example=raw)
 
-        for col_name, count in null_counts.items():
-            if count > 0:
-                violations.append({
-                    "rule": "null_in_non_nullable_column",
-                    "severity": "BREAKING",
-                    "column": col_name,
-                    "null_count": count,
-                    "total_sampled_rows": row_count
-                })
+    violations = []
+    for record in violations_agg.values():
+        record.setdefault("failed_rows", 0)
+        if record["rule"] == "missing_required_column" and record["failed_rows"] == 0:
+            record["failed_rows"] = rows_checked
+        violations.append(record)
 
     return {
         "valid": len(violations) == 0,
         "violations": violations,
-        "rows_checked": row_count
+        "rows_checked": rows_checked
     }
 
 
@@ -213,6 +280,28 @@ def quarantine_bad_batch(data_path, violations, quarantine_dir="./data/quarantin
 
     print(f"[QUARANTINE] Violating batch quarantined with metadata: {quarantine_meta_path}")
     return quarantine_meta_path
+
+
+def send_slack_alert(message_text):
+    """Post a breaking-batch alert to Slack. No-op (with a logged warning) when
+    SLACK_WEBHOOK_URL is not set; never raises even if the post fails."""
+    webhook_url = os.environ.get("SLACK_WEBHOOK_URL", "").strip()
+    if not webhook_url or webhook_url.startswith("<"):
+        print("[SLACK] SLACK_WEBHOOK_URL not set - skipping Slack alert (no-op).")
+        return False
+    try:
+        payload = json.dumps({"text": message_text}).encode("utf-8")
+        request = urllib.request.Request(
+            webhook_url, data=payload,
+            headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(request, timeout=10) as response:
+            if response.status in (200, 202, 204):
+                print("[SLACK] Breaking-batch alert sent.")
+                return True
+            print(f"[SLACK] Webhook returned unexpected status {response.status}.")
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        print(f"[SLACK] Failed to send alert (non-fatal): {exc}")
+    return False
 
 
 def main():
@@ -284,7 +373,7 @@ def main():
             contract.get("dataset_name", "unknown"),
             contract.get("version", "1.0.0"),
             contract.get("owner", "data-team"),
-            "COMPATIBLE",
+            status_str,
             contract.get("sla", {}).get("max_latency_hours", 24),
             datetime.utcnow(),
             status_str,
@@ -292,12 +381,19 @@ def main():
         ))
 
         if not val_res["valid"]:
-            print(f"\n[CONTRACT VIOLATION] {len(val_res['violations'])} contract rules violated in '{input_file}':")
+            print(f"\n[CONTRACT VIOLATION] {len(val_res['violations'])} contract rule(s) violated in '{input_file}':")
             for v in val_res["violations"]:
-                detail = v.get('expected', '') or v.get('column', '')
-                print(f"  - [{v.get('severity', 'BREAKING')}] {v['rule']}: {detail}")
-            quarantine_bad_batch(input_file, val_res["violations"], getattr(
-                args, "quarantine_dir", "./data/quarantine"))
+                column = v.get("column", "?")
+                example = f" (e.g. '{v['example']}')" if v.get("example") is not None else ""
+                print(f"  - [{v.get('severity', 'BREAKING')}] column={column!r} rule={v['rule']}"
+                      f" failed_rows={v.get('failed_rows', 0)}{example}")
+            quarantine_path = quarantine_bad_batch(
+                input_file, val_res["violations"],
+                getattr(args, "quarantine_dir", "./data/quarantine"))
+            send_slack_alert(
+                f"[Contract CLI] {contract.get('dataset_name', 'unknown')} v{contract.get('version', '?')} "
+                f"violated {len(val_res['violations'])} rule(s) in {input_file} - "
+                f"quarantined to {quarantine_path}")
             return 1
 
         ver = contract.get('version')

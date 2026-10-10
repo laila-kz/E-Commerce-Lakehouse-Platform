@@ -4,14 +4,21 @@ import sys
 import tempfile
 
 import pytest
-from delta import configure_spark_with_delta_pip
-from pyspark.sql import SparkSession
+
+try:
+    from delta import configure_spark_with_delta_pip
+    from pyspark.sql import SparkSession
+    HAVE_SPARK = True
+except Exception:
+    HAVE_SPARK = False
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 @pytest.fixture(scope="session")
 def spark():
+    if not HAVE_SPARK:
+        pytest.skip("pyspark/delta not installed - Spark-based tests skipped", allow_module_level=True)
     warehouse = tempfile.mkdtemp(prefix="silver-dedup-warehouse-")
     scratch = tempfile.mkdtemp(prefix="silver-dedup-scratch-")
 
