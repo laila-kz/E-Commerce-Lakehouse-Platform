@@ -22,7 +22,9 @@ from pyspark.sql.functions import (
     split,
     to_utc_timestamp,
     when,
+    row_number,
 )
+from pyspark.sql.window import Window
 
 try:
     from dotenv import load_dotenv
@@ -405,6 +407,48 @@ def compute_event_key(df, logger):
     return df
 
 
+def within_batch_dedup(df, logger):
+    """
+    Remove duplicate event_keys WITHIN a single batch before any write or MERGE.
+
+    Keeps the earliest ingested row per event_key (deterministic tie-break
+    on source_file), so a batch always produces at most one row per key.
+    """
+    logger.info(
+        "Starting within-batch deduplication",
+        extra={
+            "event": "within_batch_dedup_start",
+            "rows_before": df.count(),
+            "distinct_keys": df.select("event_key").distinct().count(),
+        },
+    )
+
+    window_spec = Window.partitionBy("event_key").orderBy(
+        col("ingested_at").asc(),
+        col("source_file").asc(),
+    )
+
+    deduped_df = (
+        df.withColumn("dedup_rn", row_number().over(window_spec))
+        .filter(col("dedup_rn") == 1)
+        .drop("dedup_rn")
+    )
+
+    rows_after = deduped_df.count()
+
+    logger.info(
+        "Within-batch deduplication complete",
+        extra={
+            "event": "within_batch_dedup_complete",
+            "rows_before": df.count(),
+            "rows_after": rows_after,
+            "rows_dropped": df.count() - rows_after,
+        },
+    )
+
+    return deduped_df
+
+
 def check_duplicates(df, logger):
     """Check for duplicate event_key values and log results"""
     duplicates = df.groupBy("event_key").count().filter(col("count") > 1)
@@ -464,13 +508,24 @@ def ensure_silver_table_exists(spark, silver_path, source_df, logger):
 
 def merge_into_silver(spark, silver_path, source_df, logger):
     """
-    Perform MERGE INTO Silver table using event_key
-    NO WHEN MATCHED clause (events are immutable)
+    Perform MERGE INTO Silver table using event_key.
+    NO WHEN MATCHED clause (events are immutable).
+    Runner is responsible for pass-through of ingested_at/source_file,
+    so source_df is the intermediate WITH both lineage columns.
+    Returns: expected number of new distinct event_keys that MERGE should insert.
     """
     logger.info(
         "Starting MERGE into Silver",
         extra={"event": "merge_start", "source_rows": source_df.count()}
     )
+
+    existing = spark.read.format("delta").load(silver_path)
+    new_keys = source_df.select("event_key").distinct().join(
+        existing.select("event_key").distinct(),
+        on="event_key",
+        how="left_anti",
+    )
+    expected_new_keys = new_keys.count()
 
     delta_table = DeltaTable.forPath(spark, silver_path)
 
@@ -484,14 +539,19 @@ def merge_into_silver(spark, silver_path, source_df, logger):
 
     logger.info(
         "MERGE execution completed",
-        extra={"event": "merge_executed"}
+        extra={
+            "event": "merge_executed",
+            "expected_new_keys": expected_new_keys,
+        }
     )
+
+    return expected_new_keys
 
 
 def verify_merge_success(spark, silver_path, expected_rows, logger):
     """
-    Verify MERGE succeeded by checking DESCRIBE HISTORY
-    Returns: dict with verification results
+    Verify the last write/MERGE succeeded by checking DESCRIBE HISTORY.
+    Returns: dict with verification results.
     """
     logger.info(
         "Verifying MERGE via DESCRIBE HISTORY",
@@ -511,15 +571,21 @@ def verify_merge_success(spark, silver_path, expected_rows, logger):
     operation = latest.operation
     metrics = latest.operationMetrics or {}
 
-    num_inserted = int(metrics.get("numTargetRowsInserted", 0))
-    verification_passed = num_inserted >= 0 or operation in ["WRITE", "CREATE TABLE AS SELECT"]
+    if operation in ["WRITE", "CREATE TABLE AS SELECT"]:
+        num_written = int(metrics.get("numOutputRows", -1))
+        verification_passed = num_written == expected_rows
+        verified_metric = num_written
+    else:
+        num_inserted = int(metrics.get("numTargetRowsInserted", 0))
+        verification_passed = num_inserted == expected_rows
+        verified_metric = num_inserted
 
     logger.info(
         "MERGE verification complete",
         extra={
             "event": "merge_verify_complete",
             "operation": operation,
-            "num_inserted": num_inserted,
+            "verified_metric": verified_metric,
             "expected_rows": expected_rows,
             "verified": verification_passed
         }
@@ -528,7 +594,7 @@ def verify_merge_success(spark, silver_path, expected_rows, logger):
     return {
         "verified": verification_passed,
         "operation": operation,
-        "num_inserted": num_inserted,
+        "verified_metric": verified_metric,
         "expected_rows": expected_rows,
         "version": latest.version
     }
@@ -641,20 +707,25 @@ def main():
 
         check_duplicates(final_df, logger)
 
+        final_df = within_batch_dedup(final_df, logger)
+
         table_exists, created_new = ensure_silver_table_exists(
             spark, args.silver_path, final_df, logger
         )
 
+        expected_new_keys = final_df.count()
         if created_new:
             logger.info(
                 "Initial Silver table created",
-                extra={"event": "silver_first_run", "rows": final_df.count()}
+                extra={"event": "silver_first_run", "rows": expected_new_keys}
             )
         else:
-            merge_into_silver(spark, args.silver_path, final_df, logger)
+            expected_new_keys = merge_into_silver(
+                spark, args.silver_path, final_df, logger
+            )
 
         verification = verify_merge_success(
-            spark, args.silver_path, final_df.count(), logger
+            spark, args.silver_path, expected_new_keys, logger
         )
 
         if not verification["verified"]:
