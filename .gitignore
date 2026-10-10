@@ -13,3 +13,4 @@ dbt/logs/
 dbt/.user.yml
 dbt/dev.duckdb
 audit/logs/
+Project_summary.md

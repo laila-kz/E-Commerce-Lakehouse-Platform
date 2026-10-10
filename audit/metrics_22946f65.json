@@ -1,0 +1,14 @@
+{
+  "batch_id": "22946f65",
+  "timestamp": "2026-09-20T16:16:19.372123Z",
+  "layer": "lakehouse_full",
+  "input_rows": 10000,
+  "output_rows": 9850,
+  "quarantined_rows": 150,
+  "duplicate_rate_pct": 0.02,
+  "null_rate_pct": 0.01,
+  "duration_sec": 14.2,
+  "throughput_rows_sec": 693.66,
+  "watermark_lag_sec": 120,
+  "status": "SUCCESS"
+}
