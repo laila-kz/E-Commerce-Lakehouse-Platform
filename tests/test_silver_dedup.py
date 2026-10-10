@@ -5,6 +5,7 @@ import pytest
 from spark_jobs.silver_transform import (
     ensure_silver_table_exists,
     merge_into_silver,
+    read_latest_version,
     verify_merge_success,
     within_batch_dedup,
 )
@@ -67,11 +68,14 @@ def test_replay_of_same_batch_inserts_zero_rows(spark, logger, tmp_path):
 
     replay = spark.createDataFrame([_silver_row("k1")], SILVER_COLUMNS)
 
+    version_before = read_latest_version(spark, silver_path)
     expected_new_keys = merge_into_silver(spark, silver_path, replay, logger)
     assert expected_new_keys == 0
 
-    verification = verify_merge_success(spark, silver_path, expected_new_keys, logger)
-    assert verification["operation"] == "MERGE"
+    verification = verify_merge_success(
+        spark, silver_path, expected_new_keys, logger, version_before=version_before
+    )
+    assert verification["operation"] == "NO_CHANGE"
     assert verification["verified_metric"] == 0
     assert verification["verified"] is True
 

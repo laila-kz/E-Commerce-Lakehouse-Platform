@@ -548,10 +548,29 @@ def merge_into_silver(spark, silver_path, source_df, logger):
     return expected_new_keys
 
 
-def verify_merge_success(spark, silver_path, expected_rows, logger):
+def read_latest_version(spark, silver_path):
+    """
+    Return the latest committed Delta version for silver_path,
+    or None when the table does not exist yet.
+    """
+    try:
+        history_df = spark.sql(f"DESCRIBE HISTORY delta.`{silver_path}`")
+        latest = history_df.orderBy(col("version").desc()).first()
+        return latest.version if latest else None
+    except Exception:
+        return None
+
+
+def verify_merge_success(spark, silver_path, expected_rows, logger, version_before=None):
     """
     Verify the last write/MERGE succeeded by checking DESCRIBE HISTORY.
     Returns: dict with verification results.
+
+    Delta skips no-op commits by default (spark.databricks.delta.skipRecordingEmptyCommits),
+    so a MERGE that inserts 0 rows leaves the history unchanged. When version_before is
+    provided and no new version was committed, the run is accepted only if expected_rows
+    is 0 (a legitimate no-op); otherwise it is a failure. Passing the version captured
+    before the run prevents comparing this run against a stale history entry.
     """
     logger.info(
         "Verifying MERGE via DESCRIBE HISTORY",
@@ -568,17 +587,22 @@ def verify_merge_success(spark, silver_path, expected_rows, logger):
         )
         raise RuntimeError("No Delta history entries found")
 
-    operation = latest.operation
-    metrics = latest.operationMetrics or {}
-
-    if operation in ["WRITE", "CREATE TABLE AS SELECT"]:
-        num_written = int(metrics.get("numOutputRows", -1))
-        verification_passed = num_written == expected_rows
-        verified_metric = num_written
+    if version_before is not None and latest.version == version_before:
+        operation = "NO_CHANGE"
+        verified_metric = 0
+        verification_passed = expected_rows == 0
     else:
-        num_inserted = int(metrics.get("numTargetRowsInserted", 0))
-        verification_passed = num_inserted == expected_rows
-        verified_metric = num_inserted
+        operation = latest.operation
+        metrics = latest.operationMetrics or {}
+
+        if operation in ["WRITE", "CREATE TABLE AS SELECT"]:
+            num_written = int(metrics.get("numOutputRows", -1))
+            verification_passed = num_written == expected_rows
+            verified_metric = num_written
+        else:
+            num_inserted = int(metrics.get("numTargetRowsInserted", 0))
+            verification_passed = num_inserted == expected_rows
+            verified_metric = num_inserted
 
     logger.info(
         "MERGE verification complete",
@@ -709,6 +733,8 @@ def main():
 
         final_df = within_batch_dedup(final_df, logger)
 
+        version_before = read_latest_version(spark, args.silver_path)
+
         table_exists, created_new = ensure_silver_table_exists(
             spark, args.silver_path, final_df, logger
         )
@@ -725,7 +751,8 @@ def main():
             )
 
         verification = verify_merge_success(
-            spark, args.silver_path, expected_new_keys, logger
+            spark, args.silver_path, expected_new_keys, logger,
+            version_before=version_before,
         )
 
         if not verification["verified"]:
