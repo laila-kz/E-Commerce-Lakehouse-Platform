@@ -15,7 +15,7 @@ help:
 	@echo "make run-silver           : Execute PySpark Silver incremental MERGE transform"
 	@echo "make run-dbt              : Execute dbt models (staging -> intermediate -> core -> marts)"
 	@echo "make test-dbt             : Execute full dbt test suite (84 data tests, requires Docker MinIO)"
-	@echo "make test-dbt-offline     : Execute gold dimensional & mart test suite (57 tests, zero dependencies)"
+	@echo "make test-dbt-offline     : Execute offline dbt test subset (58 tests, excludes s3_dependent; zero deps)"
 	@echo "make run-reconciliation   : Run cross-layer mathematical reconciliation check suite"
 	@echo "make run-benchmarks       : Run PySpark Optimization & Performance Benchmarking Suite"
 	@echo "make verify-all           : Execute contracts, dbt offline tests, reconciliation, and benchmarks"

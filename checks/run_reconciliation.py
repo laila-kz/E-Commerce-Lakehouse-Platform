@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 """
 Cross-Layer Reconciliation Check Suite
-Asserts zero data loss, exact deduplication preservation, and zero revenue drift
-across Raw, Bronze, Silver, and Gold layers.
 
-Checks:
-  1. stg_events rows  ==  fact_events rows          (Silver → Gold event parity)
-  2. fact_purchases revenue  ==  mart_daily_summary revenue  (Gold revenue parity)
-  3. stg_events[purchase] rows  ==  fact_purchases rows  (Silver purchase → Gold parity)
+Checks three Gold-layer pairs:
+  1. stg_events rows            ==  fact_events rows            (event row parity)
+  2. fact_purchases revenue     ==  mart_daily_summary revenue   (purchase revenue parity)
+  3. stg_events[purchase] rows  ==  fact_purchases rows          (purchase count parity)
 
 NOTE: Checks 1 & 3 query the dbt-materialised views (stg_events) which read from
 DuckDB's Gold database — they do NOT require MinIO/Docker to be running.
-If MinIO is offline, these checks are recorded as SKIP (not silently ignored).
+When a source is unavailable, the affected check is recorded as SKIP (not
+silently ignored) and the process can still exit 0.
 """
 
 import os

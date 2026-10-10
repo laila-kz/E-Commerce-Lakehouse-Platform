@@ -748,7 +748,7 @@ Clear visibility into all failures
 | Run | Command | Result |
 |-----|---------|--------|
 | Full refresh (build) | `dbt run --full-refresh` | ✅ 13/13 models built — 0 ERR |
-| Full test suite | `dbt test` | ✅ 83/83 PASS — 0 ERR, 0 WARN |
+| Full test suite | `dbt test` | ✅ 84/84 PASS — 0 ERR, 0 WARN |
 | Scoped exposure rebuild | `dbt run --select +exposure:daily_executive_dashboard` | ✅ 10 upstream models — correct lineage |
 
 ### Incremental Equivalence Proof (`mart_daily_summary`)
@@ -780,7 +780,7 @@ Clear visibility into all failures
 ## Day 43 — Airflow Orchestration Design (Phase 6 / Week 7)
 
 ### 1. Integration Strategy: `BashOperator` vs. Astronomer Cosmos
-- **Decision:** Use `BashOperator` with layer-granular task grouping (`dbt_run_staging`, `dbt_run_intermediate`, `dbt_run_dims_facts`, `dbt_run_marts`, `dbt_test_full`).
+- **Decision:** Use `BashOperator` with layer-granular task grouping (`dbt_run_staging`, `dbt_run_intermediate`, `dbt_run_dims_facts`, `dbt_run_marts`, `dbt_test_gate`).
 - **Rationale:** The dbt project uses DuckDB (`dev.duckdb`) stored directly in the workspace directory. Cosmos provides native model-level Airflow DAG generation, but requires running dbt through specialized containerized setup or Python virtual environments. Layer-based `BashOperator` execution provides clean, explicit layer isolation, straightforward debugging inside the mounted Docker volume, and predictable execution without external parser complexity while keeping per-layer failure visibility high.
 
 ### 2. Complete Task Dependency Graph & Failure Semantics
@@ -812,32 +812,31 @@ dbt_run_dims_facts
 dbt_run_marts
    │
    ▼
-dbt_test_full
+dbt_test_gate
 ```
 
 **Quality Gate Halting Semantics:** Downstream steps do NOT merely depend on prior step *completion*, but on explicit *success* (`exit_code == 0`). Airflow's default `trigger_rule="all_success"` enforces this natively because both `soda/run_soda_scan.py` and `checks/run_quality_gate.py` return exit code `1` on check failure, causing Airflow to mark downstream tasks as `upstream_failed` and halt pipeline progression immediately.
 
 ### 3. Task Command & Parameter Mapping
-| Task Name | Executor Command | Working Dir | Jinja Parameters |
-|-----------|------------------|-------------|------------------|
-| `ingest_raw` | `python /opt/airflow/project/ingestion/kaggle_ingest.py --date {{ ds }}` | `/opt/airflow/project` | `{{ ds }}` |
-| `bronze_transform` | `docker exec spark /opt/spark/bin/spark-submit --jars /opt/spark/jars-extra/*.jar --conf spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog /opt/spark/work-dir/spark_jobs/bronze_transform.py` | `/opt/airflow/project` | `{{ run_id }}` |
-| `bronze_quality_gate` | `python /opt/airflow/project/checks/run_quality_gate.py --layer bronze` | `/opt/airflow/project` | N/A |
-| `silver_transform` | `docker exec spark /opt/spark/bin/spark-submit --jars /opt/spark/jars-extra/*.jar --conf spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog /opt/spark/work-dir/spark_jobs/silver_transform.py --batch-id {{ run_id }}` | `/opt/airflow/project` | `{{ run_id }}` |
-| `silver_quality_gate` | `python /opt/airflow/project/checks/run_quality_gate.py --layer silver` | `/opt/airflow/project` | N/A |
-| `dbt_run_staging` | `dbt run --select staging --profiles-dir .` | `/opt/airflow/project/dbt` | N/A |
-| `dbt_run_intermediate` | `dbt run --select intermediate --profiles-dir .` | `/opt/airflow/project/dbt` | N/A |
-| `dbt_run_dims_facts` | `dbt run --select core --profiles-dir .` | `/opt/airflow/project/dbt` | N/A |
-| `dbt_run_marts` | `dbt run --select marts --profiles-dir .` | `/opt/airflow/project/dbt` | N/A |
-| `dbt_test_full` | `dbt test --profiles-dir .` | `/opt/airflow/project/dbt` | N/A |
+All tasks run inside the Airflow container (`cwd` = working dir). Spark tasks shell out with `docker exec spark`, so the Spark job/script path is `/workspace/...` (the mount inside the **spark** container); quality gates also run through `docker exec spark`. dbt commands run directly in the **airflow** container.
+
+| Task Name | Container | Executor Command | Working Dir | Jinja Parameters |
+|-----------|-----------|------------------|-------------|------------------|
+| `ingest_raw` | airflow | `python /opt/airflow/project/ingestion/kaggle_ingest.py --data-dir /opt/airflow/project/data/demo_sample --force` | `/opt/airflow/project` | N/A |
+| `bronze_transform` | spark | `docker exec spark /opt/spark/bin/spark-submit --driver-memory 2g --executor-memory 2g --conf spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog /workspace/spark_jobs/bronze_transform.py` | `/opt/airflow/project` | N/A |
+| `bronze_quality_gate` | spark | `docker exec spark python3 /workspace/checks/run_quality_gate.py --layer bronze` | `/opt/airflow/project` | N/A |
+| `silver_transform` | spark | `docker exec spark /opt/spark/bin/spark-submit --driver-memory 2g --executor-memory 2g --conf spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog /workspace/spark_jobs/silver_transform.py --batch-id {{ run_id }}` | `/opt/airflow/project` | `{{ run_id }}` |
+| `silver_quality_gate` | spark | `docker exec spark python3 /workspace/checks/run_quality_gate.py --layer silver` | `/opt/airflow/project` | N/A |
+| `dbt_run_staging` | airflow | `dbt run --select staging --profiles-dir .` | `/opt/airflow/project/dbt` | N/A |
+| `dbt_run_intermediate` | airflow | `dbt run --select intermediate --profiles-dir .` | `/opt/airflow/project/dbt` | N/A |
+| `dbt_run_dims_facts` | airflow | `dbt run --select core --profiles-dir .` | `/opt/airflow/project/dbt` | N/A |
+| `dbt_run_marts` | airflow | `dbt run --select marts --profiles-dir .` | `/opt/airflow/project/dbt` | N/A |
+| `dbt_test_gate` | airflow | `dbt test --profiles-dir .` | `/opt/airflow/project/dbt` | N/A |
 
 ### 4. Task Configuration (Retries, Backoff & Timeouts)
-| Task Category | Retries | Retry Delay | Retry Backoff | Execution Timeout |
-|---------------|---------|-------------|---------------|-------------------|
-| Ingestion & Gating | 3 | 2 mins | True (Exponential) | 10 mins |
-| Spark Transforms | 3 | 5 mins | True (Exponential) | 25 mins |
-| dbt Layer Builds | 2 | 2 mins | True (Exponential) | 15 mins |
-| dbt Tests | 1 | 1 min | False | 10 mins |
+Retries are uniform across all tasks via DAG `default_args`: `retries=3`, `retry_delay=2 minutes`, `retry_exponential_backoff=True`. Per-task `execution_timeout` is set individually: ingestion 10m; Bronze/Silver transforms 25m; quality gates 15m; dbt layer builds 15m; `dbt_test_gate` 10m.
+
+_Per-category retry/backoff tuning is planned (Step 7)._
 
 ### 5. Failure Notification Specification (Dual Alerting: Slack Primary + Email Fallback)
 - **Callback Hook:** `on_failure_callback` defined on DAG `default_args` (triggers strictly on final attempt failure after retries are exhausted).
@@ -887,7 +886,7 @@ docker compose exec airflow-webserver airflow dags backfill \
 | Quality Gate Halting | Injected deliberate quality gate failure | ✅ Upstream failed status propagated, downstream halted |
 | Automatic Retry Crash Recovery | Manual injection: `SIMULATE_CRASH_AFTER_MERGE=true` | ⏳ Not yet covered by an automated test |
 | Failure Notification | Callback trigger | ✅ Slack webhook dispatched + email fallback ready |
-| dbt Mart Test Suite | `dbt test` within DAG execution | ✅ 83/83 PASS — 0 ERR, 0 WARN |
+| dbt Mart Test Suite | `dbt test` within DAG execution | ✅ 84/84 PASS — 0 ERR, 0 WARN |
 
 ### Key Files Delivered
 | File | Purpose |

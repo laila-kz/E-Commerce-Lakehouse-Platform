@@ -11,7 +11,7 @@ Here is an end-to-end, structured runbook and video recording script to demonstr
 | **1. Intro & Architecture** | 0:45 | Architecture & Lineage Portal | Show GitHub Pages UI, medallion layers |
 | **2. Infrastructure Spin-up** | 0:45 | Docker, MinIO, Spark, DuckDB | `docker compose up -d` & MinIO Console |
 | **3. Ingestion & Bronze/Silver** | 1:15 | PySpark, Delta MERGE, Soda Gates | Ingestion, Bronze Delta, Silver MERGE |
-| **4. Gold dbt & Invariant Testing** | 1:00 | DuckDB, SCD 2, 57 dbt tests | `dbt run` & `dbt test` |
+| **4. Gold dbt & Invariant Testing** | 1:00 | DuckDB, SCD 2, 58 offline dbt tests (of 84) | `dbt run` & `dbt test` |
 | **5. Contracts & Reconciliation** | 0:45 | Schema Diff & $0.00 Drift Audit | `contract_cli.py` & `run_reconciliation.py` |
 | **6. Airflow Orchestration & Wrap-up** | 0:30 | Airflow DAGs & TaskGroups | Airflow UI pipeline execution |
 
@@ -83,7 +83,7 @@ cd dbt
 # Step 4.1: Run all dbt staging, intermediate, dimensional, and mart models
 dbt run --profiles-dir .
 
-# Step 4.2: Execute all 57 dbt integrity & business rule tests
+# Step 4.2: Execute the offline dbt test subset (58 of 84 tests; excludes s3_dependent)
 dbt test --exclude tag:s3_dependent --profiles-dir .
 
 # Return to root directory
@@ -106,7 +106,7 @@ python contracts/contract_cli.py diff \
 python checks/run_reconciliation.py
 ```
 
-* **Key talking point:** Explain how the breaking schema analyzer catches dropped columns and tightened types before they reach production, and how the reconciliation audit guarantees zero monetary drift between transactional events and daily reporting marts.
+* **Key talking point:** Explain how the breaking schema analyzer catches dropped columns and tightened types before they reach production, and how the reconciliation audit checks three Gold-layer pairs (staging events vs fact_events, purchase counts, purchase revenue vs mart_daily_summary); a check whose source is unavailable is recorded as SKIP and the process can still exit 0.
 
 ---
 
@@ -130,8 +130,8 @@ make verify-all
 >
 > *Next, let's run the pipeline. We ingest raw events into our MinIO S3 landing zone, transform them into Delta Lake tables, and enforce strict Soda Core quality gates that isolate invalid records to a dead-letter quarantine.*
 >
-> *In our Gold layer, dbt and DuckDB model our dimensions—including SCD Type 2 product history—and aggregate financial marts. Over 57 invariant tests pass with 100% data integrity.*
+> *In our Gold layer, dbt and DuckDB model our dimensions—including SCD Type 2 product history—and aggregate financial marts. Offline, 58 of our 84 invariant tests pass.*
 >
-> *Finally, our contract evolution engine flags breaking schema changes before they hit pipelines, and our cross-layer reconciliation audit proves exact $0.00 revenue drift across all layers.*
+> *Finally, our contract evolution engine flags breaking schema changes before they hit pipelines, and our cross-layer reconciliation audit checks row counts and purchase revenue across the Gold marts.*
 >
 > *Thank you for watching!"*

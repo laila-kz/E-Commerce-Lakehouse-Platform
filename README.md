@@ -8,7 +8,7 @@
 [![Scala 2.12](https://img.shields.io/badge/Scala-2.12.18-DC322F?style=flat&logo=scala&logoColor=white)](https://www.scala-lang.org/)
 [![Apache Spark Catalyst](https://img.shields.io/badge/Spark_Catalyst-Optimizer_Rule-E25A1C?style=flat&logo=apachespark&logoColor=white)](https://spark.apache.org/)
 
-A production-patterned local **Data Lakehouse Platform** built for high-volume e-commerce clickstream events. It combines **Apache Spark (PySpark + Custom Scala Catalyst Optimizer Rules) + Delta Lake** on **MinIO S3** for scalable transactional ingestion, automated **Soda Core quality gates**, a **YAML Data Contract engine**, **dbt + DuckDB** for dimensional modeling (SCD Type 2, sessionization, and business marts), orchestrated under **Apache Airflow** with end-to-end **OpenLineage metadata governance**.
+A production-patterned local **Data Lakehouse Platform** built for high-volume e-commerce clickstream events. It combines **Apache Spark (PySpark + Custom Scala Catalyst Optimizer Rules) + Delta Lake** on **MinIO S3** for scalable transactional ingestion, automated **Soda Core quality gates**, a **YAML Data Contract engine**, **dbt + DuckDB** for dimensional modeling (SCD Type 2, sessionization, and business marts), orchestrated under **Apache Airflow** with **OpenLineage metadata governance**.
 
 ---
 
@@ -24,10 +24,10 @@ This project solves these challenges with a **reconciliation-first, crash-resili
 ```mermaid
 graph TD
     subgraph Ingestion & Storage ["1. Storage & Ingestion"]
-        A[Kaggle API / Source CSVs] -->|kaggle_ingest.py| B[(MinIO: s3a://raw)]
-        B -->|Contract Gate: contract_cli.py| C{Contract Gate}
-        C -->|Valid| D[bronze_transform.py]
+        A[Kaggle API / Source CSVs] -->|contract_cli.py| C{Contract Gate}
+        C -->|Valid| B[(MinIO: s3a://raw)]
         C -->|Breaking Schema| Q[(s3a://raw/quarantine/)]
+        B -->|schema enforcement| D[bronze_transform.py]
     end
 
     subgraph Medallion Compute ["2. Medallion Processing (PySpark & Delta Lake)"]
@@ -51,12 +51,12 @@ graph TD
     end
 
     subgraph Governance ["4. Enterprise Governance (OpenLineage + Marquez)"]
-        D -.->|Emit Lineage & Facets| OL[Marquez Metadata Server]
-        G -.->|Emit Delta Commits| OL
-        K -.->|Emit DAG Dependencies| OL
-        P -.->|Emit Test Status| OL
+        AF[Airflow DAG ecommerce_lakehouse] -.->|OpenLineage transport: job-run lineage| OL[Marquez Metadata Server]
+        EM[scripts/emit_marquez_lineage.py] -.->|dataset & schema facets| OL
     end
 ```
+
+> _Note: the Contract Gate is a standalone CLI today (`make test-contracts`), not an Airflow DAG task. Airflow emits job-run lineage; dataset/schema facets come from `scripts/emit_marquez_lineage.py` (no Spark listener or dbt integration)._
 
 ---
 
@@ -98,7 +98,7 @@ The Gold layer dimensional model and analytical marts answer core e-commerce ope
 │   │   ├── staging/            # 1:1 view models on Silver Delta tables (stg_events, stg_products)
 │   │   ├── intermediate/       # Sessionization window models (int_sessions, int_events_enriched)
 │   │   └── marts/              # Fact tables, SCD2 dimensions, and Gold business marts
-│   └── tests/                  # 83 generic, schema, and custom singular invariant tests
+│   └── tests/                  # 84 dbt tests (74 generic + 10 singular)
 ├── docs/                       # Architectural documentation, ADRs, data dictionary, runbooks
 │   └── adr/                    # Architecture Decision Records (ADR-001 through ADR-006)
 ├── extensions/                 # Custom JVM / Spark Catalyst Extensions (Scala 2.12)
@@ -181,7 +181,7 @@ make run-bronze
 # 4. Execute PySpark Silver Transform (Incremental MERGE & Dedup)
 make run-silver
 
-# 5. Execute dbt Dimensional Transformations & Full Test Suite (83 Tests)
+# 5. Execute dbt Dimensional Transformations & Full Test Suite (84 Tests)
 make run-dbt
 make test-dbt
 
@@ -199,25 +199,27 @@ Schema changes are evaluated prior to ingestion:
 - **`WARNING`** (e.g. new optional column without default): Batch passes with operational alert.
 - **`BREAKING`** (e.g. column dropped, column renamed, data type change): Batch is quarantined to `s3a://raw/quarantine/` and Slack diff alert is dispatched.
 
+The contract gate is a standalone CLI today: `contract_cli.py` validates local CSV files and isn't called by the Airflow DAG (invoke it via `make test-contracts`).
+
 ### 2. Failure-Injection Recovery Matrix
-Design intent for simulated crash points across execution boundaries. None of these outcomes is covered by an automated failure-injection test yet:
+Only the Silver post-MERGE boundary is instrumented. The other rows describe designed behavior: they are **not instrumented** and have no automated test.
 
-| Injection Point | Injected Fault | Expected Behavior | Recovery Action | Intended Result |
+| Boundary | Instrumented? | Expected Behavior | Recovery Action | Status |
 |---|---|---|---|---|
-| **`FAIL_AFTER_INGEST`** | Raw file write completes, worker kills before marker | Idempotent marker check finds incomplete upload | Re-run ingestion | Incomplete upload is replaced on re-run (idempotent marker) |
-| **`FAIL_AFTER_BRONZE`** | Bronze Delta write succeeds, Soda check aborted | Downstream Silver job halts via gate failure | Re-run Soda gate | Gate passes; Silver resumes |
-| **`FAIL_AFTER_MERGE`** | Silver `MERGE` commits, crash before watermark update | Watermark remains at prior timestamp | Re-run Silver transform | Re-running an already-merged batch inserts 0 rows; duplicate keys inside a batch are collapsed deterministically (earliest `ingested_at`, then `source_file`) before the write |
-| **`FAIL_DURING_DBT`** | dbt model compilation fails mid-build | Staging views untouched; atomic table swap avoided | Re-run dbt | Target tables remain consistent |
+| Raw ingest | No | Incomplete upload is replaced on re-run (idempotent `_SUCCESS` marker check) | Re-run ingestion | Designed behavior, not instrumented |
+| Bronze write / gate | No | Downstream Silver halts via gate failure | Re-run Soda gate | Designed behavior, not instrumented |
+| Silver post-MERGE, pre-watermark | Yes — `SIMULATE_CRASH_AFTER_MERGE` / `FAIL_AFTER_SILVER_MERGE` / `FAIL_BEFORE_WATERMARK_UPDATE` (three aliases of one injection point, `spark_jobs/silver_transform.py`) | Watermark stays at the prior timestamp; a re-run re-MERGEs the same batch | `make run-silver` | Re-running an already-merged batch inserts 0 rows; duplicate keys inside a batch are collapsed deterministically (earliest `ingested_at`, then `source_file`) before the write |
+| dbt build | No | Target tables remain consistent (atomic swap) | Re-run dbt | Designed behavior, not instrumented |
 
-_These rows state intended recovery behavior, not verified results; no automated failure-injection test exists yet. Silver re-run idempotency and within-batch key collapse are covered by `tests/test_silver_dedup.py`, run in CI._
+_The single instrumented boundary is exercised manually via the runbook (`docs/EXECUTION_AND_RUNBOOK_GUIDE.md`); its re-run idempotency and within-batch key collapse are covered by `tests/test_silver_dedup.py`, run in CI._
 
 ---
 
 ## 🔍 Metadata & Lineage Governance (OpenLineage + Marquez)
 
 The platform implements the **Linux Foundation OpenLineage Standard**:
-- **PySpark Listener (`OpenLineageSparkListener`):** Emits dataset inputs, outputs, Delta commit versions, and job duration metrics directly to Marquez.
-- **Airflow & dbt Transport:** Automatically captures dbt model DAG dependencies and singular test outcomes.
+- **Airflow job-run lineage:** Airflow emits job-run lineage through the configured OpenLineage transport (task lifecycle states).
+- **Dataset & schema facets:** Emitted by `scripts/emit_marquez_lineage.py` for the Spark and dbt datasets. A Spark listener and a dbt integration are not implemented, and the emitter's output has not been verified against a live Marquez.
 - **Marquez UI:** Available at [http://localhost:3001](http://localhost:3001) for visual lineage inspection, dataset facet tracking, and incident blast-radius analysis.
 
 ---
@@ -240,7 +242,7 @@ Detailed Architecture Decision Records are maintained in [`docs/adr/`](docs/adr/
 - 📖 **[ADR Index](docs/adr/README.md)** — Full technical decision records.
 - 🚀 **[Execution & Runbook Guide](docs/EXECUTION_AND_RUNBOOK_GUIDE.md)** — Complete step-by-step master guide for running the pipeline locally in Fast Demo Mode.
 - 📚 **[Data Catalog & Data Dictionary](docs/data_dictionary.md)** — Unified schema reference across Raw, Bronze, Silver, and Gold.
-- ⚡ **[Spark Performance Benchmarks](docs/performance_benchmarks.md)** — Benchmark report proving 3.0x speedups via Z-Ordering and Broadcast Joins.
+- ⚡ **[Spark Performance Benchmarks](docs/performance_benchmarks.md)** — Benchmark script and a reference profile (fallback values when Spark is unavailable); a live measurement has not been recorded.
 - 📋 **[Demo Script & Runbook](docs/DEMO_AND_RUNBOOK.md)** — Cold-start execution instructions and video walkthrough guide.
 
 ---
@@ -250,5 +252,5 @@ Detailed Architecture Decision Records are maintained in [`docs/adr/`](docs/adr/
 - *Architected a production-patterned e-commerce Data Lakehouse utilizing PySpark, Delta Lake, MinIO, and dbt on DuckDB under Apache Airflow orchestration.*
 - *Implemented incremental ingestion with SHA-256 deterministic deduplication and post-commit watermarking; re-running an already-merged batch inserts 0 rows, and duplicate keys inside a batch are collapsed deterministically before the write (`tests/test_silver_dedup.py`, run in CI).*
 - *Engineered a YAML Data Contract engine with breaking-schema classification, automated dead-letter quarantine routing, and Slack diff alerting.*
-- *Integrated the OpenLineage standard with Marquez to capture end-to-end operational metadata, dataset facets, and schema evolution across Spark and dbt.*
+- *Integrated the OpenLineage standard with Marquez for Airflow job-level lineage, with `scripts/emit_marquez_lineage.py` emitting dataset and schema facets for the Spark and dbt datasets.*
 - *Authored a suite of 84 dbt tests covering SCD Type 2 dimensions, 30-minute idle sessionization, and cohort retention invariants.*

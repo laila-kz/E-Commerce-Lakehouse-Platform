@@ -165,21 +165,26 @@ Run dbt models and test assertions against DuckDB:
 cd dbt
 dbt run --profiles-dir .
 
-# 5B. Run Full 83-Test Quality Suite
+# 5B. Run Full 84-Test Quality Suite
 dbt test --profiles-dir .
 cd ..
 ```
-> **Output:** `83 of 83 tests PASSED` (Sessionization bounds, cohort retention invariants, SCD2 ranges).
+> **Output:** `84 of 84 tests PASSED` (Sessionization bounds, cohort retention invariants, SCD2 ranges).
 > 
 > *Note on Infrastructure Requirements:*
-> - When running `dbt test` against local materialized DuckDB tables (`dev.duckdb`), 55 dimension and mart invariant tests run directly with zero latency.
+> - `make test-dbt-offline` runs the offline subset (58 of the 84 tests — it excludes the 26 tests tagged `s3_dependent`) directly against local DuckDB materializations with zero latency.
 > - When running staging tests (`stg_events`, `assert_fact_events_preserve_row_count`) that invoke `delta_scan('s3://...')`, ensure the MinIO container is running (`docker compose up -d minio`) or execute dbt within the containerized environment.
 
 ---
 
-### Step 6: Cross-Layer Reconciliation Suite (Zero-Drift Assertion)
+### Step 6: Cross-Layer Reconciliation Suite
 
-Run the multi-layer mathematical reconciliation check:
+Run the reconciliation checks. It compares three Gold-layer pairs:
+1. staging events vs `fact_events` (event row parity)
+2. `fact_purchases` vs `mart_daily_summary` (purchase revenue parity)
+3. staging purchases vs `fact_purchases` (purchase count parity)
+
+When a source is unavailable, the affected check is recorded as SKIP (not silently ignored) and the process can still exit 0.
 
 ```bash
 python checks/run_reconciliation.py
@@ -258,7 +263,7 @@ If you are recording a video demo or presenting to an interviewer, run everythin
 ```bash
 make run-demo
 ```
-*(Runs sample generation, ingestion, Bronze, Silver, dbt models, and 83 data tests in ~35 seconds).*
+*(Runs sample generation, ingestion, Bronze, Silver, dbt models, and 84 data tests in ~35 seconds).*
 
 ---
 

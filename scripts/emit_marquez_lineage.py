@@ -88,23 +88,32 @@ def main():
         }
     }
 
+    # Real Silver columns: spark_jobs/silver_transform.py output
+    #   category_l1/l2/l3 (L342-353), event_date (L371), event_key (L378-390),
+    #   plus lineage columns added in spark_jobs/bronze_transform.py (L265-270).
     silver_schema = {
         "schema": {
             "_producer": "https://github.com/OpenLineage/OpenLineage",
             "_schemaURL": "https://openlineage.io/spec/facets/1-0-0/SchemaDatasetFacet.json",
             "fields": [
-                {"name": "event_time", "type": "TIMESTAMP"},
-                {"name": "event_type", "type": "STRING"},
-                {"name": "product_id", "type": "INT"},
-                {"name": "category_id", "type": "BIGINT"},
-                {"name": "brand", "type": "STRING"},
-                {"name": "price", "type": "DOUBLE"},
+                {"name": "event_key", "type": "STRING"},
                 {"name": "user_id", "type": "BIGINT"},
                 {"name": "user_session", "type": "STRING"},
-                {"name": "event_date", "type": "DATE"},
-                {"name": "dedup_hash", "type": "STRING"},
-                {"name": "is_valid", "type": "BOOLEAN"},
-                {"name": "processed_at", "type": "TIMESTAMP"}
+                {"name": "event_type", "type": "STRING"},
+                {"name": "product_id", "type": "BIGINT"},
+                {"name": "category_id", "type": "BIGINT"},
+                {"name": "category_code", "type": "STRING"},
+                {"name": "category_l1", "type": "STRING"},
+                {"name": "category_l2", "type": "STRING"},
+                {"name": "category_l3", "type": "STRING"},
+                {"name": "brand", "type": "STRING"},
+                {"name": "price", "type": "DOUBLE"},
+                {"name": "event_time", "type": "TIMESTAMP"},
+                {"name": "event_date", "type": "STRING"},
+                {"name": "ingested_at", "type": "TIMESTAMP"},
+                {"name": "source_file", "type": "STRING"},
+                {"name": "pipeline_run_id", "type": "STRING"},
+                {"name": "batch_id", "type": "STRING"}
             ]
         }
     }
@@ -171,27 +180,29 @@ def main():
         outputs=[{"namespace": "duckdb://dbt/dev.duckdb", "name": "stg_events", "facets": silver_schema}]
     )
 
-    # 5. dbt Intermediate: stg_events -> int_sessionized_events & int_user_daily_activity
+    # 5. dbt Intermediate: stg_events -> int_sessions, int_events_enriched, int_customer_month_activity
     emit_event(
         job_name="dbt_intermediate_models",
         inputs=[{"namespace": "duckdb://dbt/dev.duckdb", "name": "stg_events", "facets": silver_schema}],
         outputs=[
-            {"namespace": "duckdb://dbt/dev.duckdb", "name": "int_sessionized_events"},
-            {"namespace": "duckdb://dbt/dev.duckdb", "name": "int_user_daily_activity"}
+            {"namespace": "duckdb://dbt/dev.duckdb", "name": "int_sessions"},
+            {"namespace": "duckdb://dbt/dev.duckdb", "name": "int_events_enriched"},
+            {"namespace": "duckdb://dbt/dev.duckdb", "name": "int_customer_month_activity"}
         ]
     )
 
-    # 6. dbt Dims & Facts: int_* -> dim_customer, dim_products, fact_events, fact_purchases
+    # 6. dbt Dims & Facts: int_* -> dim_customer, dim_product, dim_date, fact_events, fact_purchases
     emit_event(
         job_name="dbt_core_dims_and_facts",
         inputs=[
-            {"namespace": "duckdb://dbt/dev.duckdb", "name": "int_sessionized_events"},
-            {"namespace": "duckdb://dbt/dev.duckdb", "name": "int_user_daily_activity"}
+            {"namespace": "duckdb://dbt/dev.duckdb", "name": "int_sessions"},
+            {"namespace": "duckdb://dbt/dev.duckdb", "name": "int_events_enriched"},
+            {"namespace": "duckdb://dbt/dev.duckdb", "name": "int_customer_month_activity"}
         ],
         outputs=[
             {"namespace": "duckdb://dbt/dev.duckdb", "name": "dim_customer"},
-            {"namespace": "duckdb://dbt/dev.duckdb", "name": "dim_products"},
-            {"namespace": "duckdb://dbt/dev.duckdb", "name": "dim_dates"},
+            {"namespace": "duckdb://dbt/dev.duckdb", "name": "dim_product"},
+            {"namespace": "duckdb://dbt/dev.duckdb", "name": "dim_date"},
             {"namespace": "duckdb://dbt/dev.duckdb", "name": "fact_events"},
             {"namespace": "duckdb://dbt/dev.duckdb", "name": "fact_purchases"}
         ]

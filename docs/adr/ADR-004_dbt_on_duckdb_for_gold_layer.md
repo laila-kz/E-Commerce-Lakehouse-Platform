@@ -13,7 +13,7 @@ In a local Lakehouse architecture, PySpark handles large-scale heavy ingestion, 
 We adopted **`dbt-duckdb`** as our transformation and modeling engine for the Gold layer:
 - DuckDB reads Silver Delta Lake tables directly from MinIO using the native `delta` and `httpfs` extensions.
 - dbt compiles and executes standard SQL models (staging views, intermediate sessionizers, dimensional fact/dim tables, and aggregated gold marts) directly against DuckDB.
-- All 83 schema tests, generic tests, and singular invariant assertions run locally in seconds.
+- All 84 dbt tests (74 generic + 10 singular) run locally in seconds.
 
 ## Alternatives Considered
 - **dbt-spark / Spark SQL:** High JVM overhead; running tests and compilation is slow in local Docker environments.

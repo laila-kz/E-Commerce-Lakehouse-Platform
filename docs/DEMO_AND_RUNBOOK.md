@@ -22,7 +22,7 @@ python ingestion/kaggle_ingest.py --data-dir ./data/demo_sample --force
 make run-bronze
 make run-silver
 
-# 5. Step 4: dbt Models & Full Invariant Test Suite (83 Tests)
+# 5. Step 4: dbt Models & Full Invariant Test Suite (84 Tests)
 make run-dbt
 make test-dbt
 
@@ -85,13 +85,13 @@ make run-silver
 ---
 
 ### 📊 Step 4: dbt Dimensional Modeling & Invariant Test Suite
-**Talking Point:** *"dbt on DuckDB builds our analytical star schema (SCD Type 2 product dimensions, 30-minute idle sessionization, and Gold business marts) verified by 83 rigorous tests."*
+**Talking Point:** *"dbt on DuckDB builds our analytical star schema (SCD Type 2 product dimensions, 30-minute idle sessionization, and Gold business marts) verified by 84 rigorous tests."*
 
 ```bash
 make run-dbt
 make test-dbt
 ```
-**Screen Display:** Terminal showing `83 of 83 tests PASSED`.
+**Screen Display:** Terminal showing `84 of 84 tests PASSED`.
 
 ---
 
@@ -101,7 +101,7 @@ make test-dbt
 ```bash
 python checks/run_reconciliation.py
 ```
-**Screen Display:** Terminal showing 0.00% drift report across all layers.
+**Screen Display:** Terminal showing 0 drift on the three Gold-layer checks (staging events vs fact_events, purchase counts, purchase revenue vs mart_daily_summary); a check whose source is unavailable is recorded as SKIP and the process can still exit 0.
 
 ---
 
@@ -116,7 +116,7 @@ python scripts/replay_events.py --start-date 2019-10-01 --end-date 2019-10-05 --
 ---
 
 ### 🌐 Step 7: OpenLineage & Marquez Control Plane
-**Talking Point:** *"All operational metadata, dataset schemas, Delta Lake commits, and DAG run lifecycles are automatically captured under the OpenLineage standard in Marquez."*
+**Talking Point:** *"Airflow emits job-run lineage under the OpenLineage standard via its transport, and dataset/schema facets for the Spark and dbt datasets are emitted to Marquez by `scripts/emit_marquez_lineage.py`."*
 
 **Action:**
 1. Open browser to **[http://localhost:3001](http://localhost:3001)** (Marquez Web UI).

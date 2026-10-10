@@ -12,8 +12,8 @@ A major operational blind spot in multi-engine Lakehouse environments (Spark for
 ## Decision
 We adopted the **Linux Foundation OpenLineage Standard** with **Marquez** as the centralized metadata and lineage repository:
 - **Marquez Deployment:** Runs as a lightweight service in `docker-compose.yml` (`marquezproject/marquez`), exposing standard OpenLineage REST APIs and a visual Web UI.
-- **Spark Instrumentation:** PySpark jobs emit run-level facets, input/output Delta dataset URIs, schemas, and row-count metrics via `OpenLineageSparkListener`.
-- **Airflow & dbt Lineage:** Airflow's OpenLineage transport (`AIRFLOW__OPENLINEAGE__TRANSPORT`) automatically captures task lifecycle states and dbt model-level dependencies.
+- **Airflow lineage:** Airflow emits job-run lineage through the configured OpenLineage transport (`AIRFLOW__OPENLINEAGE__TRANSPORT`) at the task level.
+- **Dataset & schema facets:** `scripts/emit_marquez_lineage.py` emits dataset inputs, outputs, and schema facets for the Spark and dbt datasets. A Spark listener and a dbt model-level integration are not implemented; the emitter's output has not been verified against a live Marquez instance.
 - **Incident Blast Radius Analysis:** When contract violations occur, Marquez visualizes the exact downstream models and consumers impacted by the quarantine.
 
 ## Alternatives Considered
@@ -24,7 +24,7 @@ We adopted the **Linux Foundation OpenLineage Standard** with **Marquez** as the
 ## Tradeoffs & Consequences
 - **Positive:**
   - Standardized, vendor-neutral OpenLineage JSON spec.
-  - Automatic collection of dataset schemas, job run durations, and input/output dependencies across both Spark and dbt.
+  - Airflow job-run lineage, plus a script that emits dataset schemas and input/output dependencies for the Spark and dbt datasets (emitter output not yet verified against a live Marquez).
   - Clear visual interface for incident root-cause and blast-radius triage.
 - **Negative:**
-  - Requires adding the Marquez container to Docker Compose and adding OpenLineage listener configuration to Spark jobs.
+  - Requires adding the Marquez container to Docker Compose and running `scripts/emit_marquez_lineage.py` (or Airflow's transport) to populate facets.

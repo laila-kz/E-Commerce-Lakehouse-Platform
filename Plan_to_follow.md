@@ -45,13 +45,13 @@ Four sequential stages. Each stage should be fully closed out (README/tags updat
   - [x] Persist results to a `reconciliation_results` table with run metadata (check_name, source_layer, target_layer, source_count, target_count, diff, status, run_id).
 - [x] **Platform Observability Metrics**
   - [x] Populate `pipeline_metrics` table per run: input/output row counts, quarantined count, duplicate count, null %, min/max event time, processing duration, throughput (rows/sec), watermark lag, late-event count.
-- [x] **Formal Failure-Injection Test Matrix**
-  - [x] Extend `SIMULATE_CRASH_AFTER_MERGE` into named failure points: `FAIL_AFTER_INGEST`, `FAIL_AFTER_BRONZE_WRITE`, `FAIL_AFTER_SILVER_MERGE`, `FAIL_BEFORE_WATERMARK_UPDATE`, `FAIL_DURING_DBT`.
-  - [x] For each: document expected behavior and verify — zero duplicate event keys, zero lost rows, correct watermark state, successful retry.
-  - [x] Add the verified pass/fail table in README under "Reliability Experiments".
+- [ ] **Formal Failure-Injection Test Matrix**
+  - [ ] Only the Silver post-MERGE boundary is instrumented today (`SIMULATE_CRASH_AFTER_MERGE` / `FAIL_AFTER_SILVER_MERGE` / `FAIL_BEFORE_WATERMARK_UPDATE`); instrument the remaining boundaries.
+  - [ ] For each boundary: verify no lost/duplicated rows and correct watermark state.
+  - [ ] Publish a verified pass/fail matrix in README under "Reliability, Contracts & Crash-Recovery Matrix" (currently states designed behavior only for the uninstrumented boundaries).
 - [x] Write ADR-005 (Late Data & Partition Rebuild Strategy).
 
-**Stage 2 exit criteria:** You can point to a reconciliation table proving zero drift across layers and a documented matrix proving crash-recovery at every pipeline boundary. (COMPLETED)
+**Stage 2 exit criteria:** Reconciliation checks exist; the failure-injection matrix is partial — only the Silver post-MERGE boundary is instrumented, the rest are documented designed behavior. (PARTIAL)
 
 ---
 
@@ -77,13 +77,13 @@ Four sequential stages. Each stage should be fully closed out (README/tags updat
 
 ## Stage 4 — Enterprise Governance: OpenLineage & Marquez Control Plane
 
-**Purpose:** Deploy an industry-standard metadata & lineage platform (OpenLineage + Marquez) in Docker that automatically captures end-to-end dataset dependencies, run facets, and schema evolution.
+**Purpose:** Deploy an industry-standard metadata & lineage platform (OpenLineage + Marquez) in Docker for Airflow job-run lineage and emitted dataset/schema facets.
 
 - [x] **Marquez Platform Deployment (Docker)**
   - [x] Add `marquez` and `marquez-web` services to `docker-compose.yml`.
   - [x] Expose Marquez UI on port `3001` (to prevent Metabase port conflict) and API on port `5000`.
 - [x] **OpenLineage Instrumentation across Pipeline Layers**
-  - [x] **Spark:** Configure OpenLineage listener (`OpenLineageSparkListener`) in `spark_jobs/` to emit dataset inputs, outputs, schemas, and execution metrics to Marquez.
+  - [x] **Spark:** Emit dataset inputs, outputs, and schemas to Marquez via `scripts/emit_marquez_lineage.py`; a Spark OpenLineage listener is not implemented (finding F-006).
   - [x] **dbt / Airflow:** Configure Airflow's built-in OpenLineage transport (`AIRFLOW__OPENLINEAGE__TRANSPORT`) in `docker-compose.yml` and `Dockerfile.airflow`.
 - [x] **Incident Triage & Lineage Walkthrough in Marquez**
   - [x] Demonstrate complete end-to-end graph: `Raw (Files/S3)` ➔ `Bronze Delta` ➔ `Silver Delta` ➔ `Gold Marts`.
