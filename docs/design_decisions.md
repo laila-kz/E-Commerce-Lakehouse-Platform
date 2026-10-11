@@ -242,7 +242,7 @@ BRONZE_EVENT_SCHEMA = StructType([
 ## Silver Layer: Watermark Design
 
 ### Watermark Storage Location
-A Delta table at `s3a://silver/_watermarks/` is the preferred storage mechanism. It keeps the watermark state alongside the Silver data in the same storage layer, is easy to inspect, and supports atomic updates with Delta transactions.
+A Delta table at `s3a://silver/ecommerce_events/_watermarks` is the preferred storage mechanism. It keeps the watermark state alongside the Silver data in the same storage layer, is easy to inspect, and supports atomic updates with Delta transactions.
 
 ### Watermark Table Schema
 The watermark table should contain:
@@ -402,7 +402,7 @@ Only the first three levels are preserved to keep the Silver schema simple and s
 ### Check Against Requirements
 | Guide Requirement | Our Design | Status |
 |-------------------|------------|--------|
-| Watermark stored in Delta | Delta table at `s3a://silver/_watermarks/` | ✅ |
+| Watermark stored in Delta | Delta table at `s3a://silver/ecommerce_events/_watermarks` | ✅ |
 | Watermark updates after MERGE | Yes, after successful commit | ✅ |
 | Synthetic deduplication key | `user_id|event_type|product_id|event_time` hashed with SHA-256 | ✅ |
 | MERGE uses event_key | Yes | ✅ |

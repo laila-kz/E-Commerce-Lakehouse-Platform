@@ -8,7 +8,7 @@
 [![Scala 2.12](https://img.shields.io/badge/Scala-2.12.18-DC322F?style=flat&logo=scala&logoColor=white)](https://www.scala-lang.org/)
 [![Apache Spark Catalyst](https://img.shields.io/badge/Spark_Catalyst-Optimizer_Rule-E25A1C?style=flat&logo=apachespark&logoColor=white)](https://spark.apache.org/)
 
-A production-patterned local **Data Lakehouse Platform** built for high-volume e-commerce clickstream events. It combines **Apache Spark (PySpark + Custom Scala Catalyst Optimizer Rules) + Delta Lake** on **MinIO S3** for scalable transactional ingestion, automated **Soda Core quality gates**, a **YAML Data Contract engine**, **dbt + DuckDB** for dimensional modeling (SCD Type 2, sessionization, and business marts), orchestrated under **Apache Airflow** with **OpenLineage metadata governance**.
+A production-patterned local **Data Lakehouse Platform** built for high-volume e-commerce clickstream events. It combines **Apache Spark (PySpark + Custom Scala Catalyst Optimizer Rules) + Delta Lake** on **MinIO S3** for scalable transactional ingestion, automated **Soda Core quality gates**, a **YAML Data Contract engine**, **dbt + DuckDB** for dimensional modeling (SCD Type 2 on `dim_product`, a Type 1 thin `dim_customer`, sessionization, and business marts), orchestrated under **Apache Airflow** with **OpenLineage metadata governance**.
 
 ---
 
@@ -46,7 +46,7 @@ graph TD
         L -->|30-min Idle Windowing| M[int_sessions / int_events_enriched]
         M -->|SCD Type 2 (product) + Star Schema| N[dim_customer / dim_product / dim_date]
         N --> O[fact_events / fact_purchases]
-        O -->|Incremental delete+insert| P[mart_daily_summary / mart_retention / mart_category]
+        O -->|Incremental delete+insert| P[mart_daily_summary / mart_customer_retention / mart_category_performance]
         P -->|84 dbt Tests Passing| R[dbt Exposures & BI Dashboards]
     end
 
@@ -278,4 +278,4 @@ Detailed Architecture Decision Records are maintained in [`docs/adr/`](docs/adr/
 - *Implemented incremental ingestion with SHA-256 deterministic deduplication and post-commit watermarking; re-running an already-merged batch inserts 0 rows, and duplicate keys inside a batch are collapsed deterministically before the write (`tests/test_silver_dedup.py`, run in CI).*
 - *Engineered a YAML Data Contract engine with breaking-schema classification, automated dead-letter quarantine routing, and breaking-batch Slack alerting (no-op when the webhook is unset).*
 - *Integrated the OpenLineage standard with Marquez for Airflow job-level lineage, with `scripts/emit_marquez_lineage.py` emitting dataset and schema facets for the Spark and dbt datasets.*
-- *Authored a suite of 84 dbt tests covering SCD Type 2 dimensions, 30-minute idle sessionization, and cohort retention invariants.*
+- *Authored a suite of 84 dbt tests covering SCD Type 2 (`dim_product`), a Type 1 thin dimension (`dim_customer`), 30-minute idle sessionization, and cohort retention invariants.*

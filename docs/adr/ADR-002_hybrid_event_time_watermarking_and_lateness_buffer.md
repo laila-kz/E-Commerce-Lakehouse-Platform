@@ -14,7 +14,7 @@ We implemented a **Hybrid Event-Time Watermarking Strategy** with **Post-Commit 
 
 1. **State Isolation:** The watermark is persisted in a dedicated Delta state table (`s3a://silver/ecommerce_events/_watermarks`) storing `last_processed_event_time`, `updated_at`, and `last_batch_id`.
 2. **Post-Commit Advancement:** The watermark is updated *only after* the Delta `MERGE` operation completes and is verified via Delta's `DESCRIBE HISTORY` transaction log.
-3. **Lateness Lookback Buffer:** Ingestion filters Bronze using an allowed lateness window (`event_time > watermark - INTERVAL '3 DAYS'`), allowing late-arriving events to be merged safely into historical partitions.
+3. **Lateness Lookback Buffer:** Ingestion filters Bronze using an allowed lateness window (`event_time >= watermark - INTERVAL '3 DAYS'`), allowing late-arriving events to be merged safely into historical partitions.
 4. **Backfill Isolation:** When running in backfill mode (`--mode backfill`), the production high-watermark is untouched to prevent historical reprocessing from regressing the production watermark.
 
 ## Alternatives Considered
