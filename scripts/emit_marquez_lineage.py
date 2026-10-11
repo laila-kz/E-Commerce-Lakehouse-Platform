@@ -60,11 +60,12 @@ def main():
             "fields": [
                 {"name": "event_time", "type": "STRING"},
                 {"name": "event_type", "type": "STRING"},
-                {"name": "product_id", "type": "INT"},
-                {"name": "category_id", "type": "BIGINT"},
+                {"name": "product_id", "type": "LONG"},
+                {"name": "category_id", "type": "LONG"},
+                {"name": "category_code", "type": "STRING"},
                 {"name": "brand", "type": "STRING"},
-                {"name": "price", "type": "FLOAT"},
-                {"name": "user_id", "type": "BIGINT"},
+                {"name": "price", "type": "DOUBLE"},
+                {"name": "user_id", "type": "LONG"},
                 {"name": "user_session", "type": "STRING"}
             ]
         }
@@ -77,13 +78,18 @@ def main():
             "fields": [
                 {"name": "event_time", "type": "TIMESTAMP"},
                 {"name": "event_type", "type": "STRING"},
-                {"name": "product_id", "type": "INT"},
-                {"name": "category_id", "type": "BIGINT"},
+                {"name": "product_id", "type": "LONG"},
+                {"name": "category_id", "type": "LONG"},
+                {"name": "category_code", "type": "STRING"},
                 {"name": "brand", "type": "STRING"},
                 {"name": "price", "type": "DOUBLE"},
-                {"name": "user_id", "type": "BIGINT"},
+                {"name": "user_id", "type": "LONG"},
                 {"name": "user_session", "type": "STRING"},
-                {"name": "ingested_at", "type": "TIMESTAMP"}
+                {"name": "ingested_at", "type": "TIMESTAMP"},
+                {"name": "source_file", "type": "STRING"},
+                {"name": "pipeline_run_id", "type": "STRING"},
+                {"name": "batch_id", "type": "STRING"},
+                {"name": "event_date", "type": "DATE"}
             ]
         }
     }
@@ -118,36 +124,34 @@ def main():
         }
     }
 
+    # Real mart columns: dbt/models/marts/mart_daily_summary.sql (combined CTE)
     marts_daily_schema = {
         "schema": {
             "_producer": "https://github.com/OpenLineage/OpenLineage",
             "_schemaURL": "https://openlineage.io/spec/facets/1-0-0/SchemaDatasetFacet.json",
             "fields": [
                 {"name": "date", "type": "DATE"},
-                {"name": "product_id", "type": "BIGINT"},
-                {"name": "customer_key", "type": "VARCHAR"},
-                {"name": "active_users", "type": "BIGINT"},
-                {"name": "total_views", "type": "BIGINT"},
-                {"name": "total_carts", "type": "BIGINT"},
+                {"name": "category_l1", "type": "VARCHAR"},
+                {"name": "total_events", "type": "BIGINT"},
                 {"name": "total_purchases", "type": "BIGINT"},
                 {"name": "total_revenue", "type": "DOUBLE"},
-                {"name": "avg_order_value", "type": "DOUBLE"},
-                {"name": "conversion_rate_pct", "type": "DOUBLE"},
+                {"name": "active_users", "type": "BIGINT"},
                 {"name": "last_recomputed_at", "type": "TIMESTAMP"}
             ]
         }
     }
 
+    # Real mart columns: dbt/models/marts/mart_customer_retention.sql (final CTE)
     marts_retention_schema = {
         "schema": {
             "_producer": "https://github.com/OpenLineage/OpenLineage",
             "_schemaURL": "https://openlineage.io/spec/facets/1-0-0/SchemaDatasetFacet.json",
             "fields": [
                 {"name": "cohort_month", "type": "DATE"},
+                {"name": "months_since_first_purchase", "type": "BIGINT"},
                 {"name": "cohort_size", "type": "BIGINT"},
-                {"name": "m0_active", "type": "BIGINT"},
-                {"name": "m1_active", "type": "BIGINT"},
-                {"name": "m1_retention_pct", "type": "DOUBLE"}
+                {"name": "retained_count", "type": "BIGINT"},
+                {"name": "retention_rate", "type": "DOUBLE"}
             ]
         }
     }
