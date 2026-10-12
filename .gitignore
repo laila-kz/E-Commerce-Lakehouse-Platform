@@ -15,6 +15,7 @@ dbt/logs/
 dbt/.user.yml
 dbt/dev.duckdb
 audit/logs/
+audit/*.json
 Project_summary.md
 .vscode/
 Agent Handoff Brief_ Lakehouse Remediation.md
