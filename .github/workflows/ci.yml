@@ -6,11 +6,10 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Required for GitHub Pages deployment
+# Least privilege by default: read-only repository contents for all jobs.
+# The publish-lineage-graph job raises this to write access for Pages deployment.
 permissions:
-  contents: write
-  pages: write
-  id-token: write
+  contents: read
 
 jobs:
   lint-code:
@@ -148,6 +147,11 @@ jobs:
     # Deploy only from main, never from pull requests
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [ lint-code, python-syntax, dbt-check, unit-tests, spark-tests, scala-tests ]
+    # Scoped write permissions: only this job needs to publish to GitHub Pages.
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -164,10 +168,18 @@ jobs:
 
       - name: Compile dbt to produce manifest.json
         working-directory: ./dbt
-        # If dbt compile fails (e.g. no DuckDB data), fall through to static fallback
+        # dbt parse/compile correctness is already enforced as a hard gate by the
+        # `dbt-check` job above. This step only needs manifest.json for the graph,
+        # so a failure here must not abort the job: log an explicit warning and let
+        # `generate_graph.py` fall back to its static graph instead of silently
+        # swallowing the error with `|| true`.
         run: |
-          dbt parse --profiles-dir . || true
-          dbt compile --profiles-dir . || true
+          if ! dbt parse --profiles-dir .; then
+            echo "::warning title=dbt parse failed::Continuing with static graph fallback; see dbt-check job for the hard gate."
+          fi
+          if ! dbt compile --profiles-dir .; then
+            echo "::warning title=dbt compile failed::Continuing with static graph fallback; see dbt-check job for the hard gate."
+          fi
 
       - name: Generate graph_data.json
         # Uses manifest.json if produced above, otherwise static fallback
