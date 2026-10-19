@@ -12,6 +12,12 @@
 
 A production-patterned local **Data Lakehouse Platform** built for high-volume e-commerce clickstream events. It combines **Apache Spark (PySpark + Custom Scala Catalyst Optimizer Rules) + Delta Lake** on **MinIO S3** for scalable transactional ingestion, automated **Soda Core quality gates**, a **YAML Data Contract engine**, **dbt + DuckDB** for dimensional modeling (SCD Type 2 on `dim_product`, a Type 1 thin `dim_customer`, sessionization, and business marts), orchestrated under **Apache Airflow** with **OpenLineage metadata governance**.
 
+> [!TIP]
+> ### 🌐 Live Interactive Deployments (Hosted on GitHub Pages)
+> Explore the platform live in your browser (no local setup or Docker required):
+> - 📊 **[Live Gold Marts Analytics Dashboard](https://laila-kz.github.io/E-Commerce-Lakehouse-Platform/dashboard.html)** — DuckDB Gold marts visualization ($378K GMV, 100K events), GMV velocity trends, customer cohort retention heatmap & category mix.
+> - 🗺️ **[Live Governance & Lineage Portal](https://laila-kz.github.io/E-Commerce-Lakehouse-Platform/)** — Interactive 110-node medallion lineage DAG, data contracts inspector, schema dictionaries & Spark benchmarks.
+
 ---
 
 ## 🎯 Platform Mission & Core Architecture
