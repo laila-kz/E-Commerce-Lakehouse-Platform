@@ -144,8 +144,8 @@ jobs:
   publish-lineage-graph:
     name: 🌐 Build & Publish 3D Lineage Graph
     runs-on: ubuntu-latest
-    # Deploy only from main, never from pull requests
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Deploy from main or audit-remediation
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/audit-remediation')
     needs: [ lint-code, python-syntax, dbt-check, unit-tests, spark-tests, scala-tests ]
     # Scoped write permissions: only this job needs to publish to GitHub Pages.
     permissions:
