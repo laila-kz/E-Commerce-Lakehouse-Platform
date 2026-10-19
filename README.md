@@ -7,6 +7,8 @@
 [![Apache Airflow](https://img.shields.io/badge/Airflow-017CEE?style=flat&logo=apacheairflow&logoColor=white)](https://airflow.apache.org/)
 [![Scala 2.12](https://img.shields.io/badge/Scala-2.12.18-DC322F?style=flat&logo=scala&logoColor=white)](https://www.scala-lang.org/)
 [![Apache Spark Catalyst](https://img.shields.io/badge/Spark_Catalyst-Optimizer_Rule-E25A1C?style=flat&logo=apachespark&logoColor=white)](https://spark.apache.org/)
+[![Live Dashboard](https://img.shields.io/badge/Live_Dashboard-GitHub_Pages-00D4FF?style=flat&logo=chartdotjs&logoColor=black)](https://laila-kz.github.io/E-Commerce-Lakehouse-Platform/dashboard.html)
+[![Governance Portal](https://img.shields.io/badge/Governance_Portal-Interactive_DAG-7C3AED?style=flat)](https://laila-kz.github.io/E-Commerce-Lakehouse-Platform/)
 
 A production-patterned local **Data Lakehouse Platform** built for high-volume e-commerce clickstream events. It combines **Apache Spark (PySpark + Custom Scala Catalyst Optimizer Rules) + Delta Lake** on **MinIO S3** for scalable transactional ingestion, automated **Soda Core quality gates**, a **YAML Data Contract engine**, **dbt + DuckDB** for dimensional modeling (SCD Type 2 on `dim_product`, a Type 1 thin `dim_customer`, sessionization, and business marts), orchestrated under **Apache Airflow** with **OpenLineage metadata governance**.
 
@@ -257,6 +259,23 @@ After running `python scripts/emit_marquez_lineage.py`, navigate to `http://loca
 
 ---
 
+## 📊 Business Intelligence & Analytics Dashboard (Live)
+
+The platform includes a **serverless, public Business Intelligence Dashboard** deployed on **GitHub Pages**, querying Gold Layer analytical marts exported from DuckDB (`dbt/dev.duckdb`):
+
+- 🌐 **Live Analytics Dashboard:** [https://laila-kz.github.io/E-Commerce-Lakehouse-Platform/dashboard.html](https://laila-kz.github.io/E-Commerce-Lakehouse-Platform/dashboard.html)
+- 🗺️ **Live Lineage & Governance Portal:** [https://laila-kz.github.io/E-Commerce-Lakehouse-Platform/](https://laila-kz.github.io/E-Commerce-Lakehouse-Platform/)
+
+#### Core Metrics & Dimensional Marts Visualized:
+1. **Executive Platform KPIs:** Real-time event volume (100.0K), total GMV ($377.9K), active unique users (15.2K), and completed purchases (1.3K) computed from `mart_daily_summary`.
+2. **Dual-Axis GMV Velocity & Event Volume:** 30-day timeline correlating daily revenue trends against clickstream browsing peaks.
+3. **Customer Cohort Retention Heatmap:** Real cohort curves tracked across `mart_customer_retention`, validating the Month-0 100% retention invariant and natural customer decay over time.
+4. **Category Performance & Revenue Mix:** Month-over-month category growth rate bars and GMV share donut chart from `mart_category_performance`.
+
+![E-Commerce Lakehouse Gold Analytics Dashboard](docs/dashboard_screenshot.png)
+
+---
+
 ## ⚖️ Architectural Decisions & Tradeoffs
 
 Detailed Architecture Decision Records are maintained in [`docs/adr/`](docs/adr/README.md):
@@ -272,6 +291,8 @@ Detailed Architecture Decision Records are maintained in [`docs/adr/`](docs/adr/
 
 ## 📚 Technical Documentation
 
+- 📊 **[Live Gold Marts Dashboard](https://laila-kz.github.io/E-Commerce-Lakehouse-Platform/dashboard.html)** — Interactive Chart.js analytics dashboard powered by DuckDB Gold marts.
+- 🗺️ **[Governance & Lineage Portal](https://laila-kz.github.io/E-Commerce-Lakehouse-Platform/)** — Interactive D3/SVG medallion lineage graph, data contracts, and quality gate reports.
 - 📖 **[ADR Index](docs/adr/README.md)** — Full technical decision records.
 - 🚀 **[Execution & Runbook Guide](docs/EXECUTION_AND_RUNBOOK_GUIDE.md)** — Complete step-by-step master guide for running the pipeline locally in Fast Demo Mode.
 - 📚 **[Data Catalog & Data Dictionary](docs/data_dictionary.md)** — Unified schema reference across Raw, Bronze, Silver, and Gold.
@@ -287,3 +308,4 @@ Detailed Architecture Decision Records are maintained in [`docs/adr/`](docs/adr/
 - *Engineered a YAML Data Contract engine with breaking-schema classification, automated dead-letter quarantine routing, and breaking-batch Slack alerting (no-op when the webhook is unset).*
 - *Integrated the OpenLineage standard with Marquez for Airflow job-level lineage, with `scripts/emit_marquez_lineage.py` emitting dataset and schema facets for the Spark and dbt datasets.*
 - *Authored a suite of 84 dbt tests covering SCD Type 2 (`dim_product`), a Type 1 thin dimension (`dim_customer`), 30-minute idle sessionization, and cohort retention invariants.*
+- *Built and deployed a zero-maintenance, serverless Gold Layer analytics dashboard on GitHub Pages, visualizing GMV velocity, cohort retention curves, and category performance from DuckDB marts.*

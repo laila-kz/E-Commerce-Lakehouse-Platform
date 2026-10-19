@@ -185,6 +185,9 @@ jobs:
         # Uses manifest.json if produced above, otherwise static fallback
         run: python scripts/generate_graph.py --manifest dbt/target/manifest.json --out docs/graph_data.json
 
+      - name: Export Gold Marts Dashboard Data
+        run: python scripts/export_dashboard_data.py
+
       - name: Verify output
         run: |
           echo "=== graph_data.json summary ==="
