@@ -960,14 +960,14 @@
     <div class="top-actions">
       <div class="status-badge badge-green">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-        Pipeline Healthy
+        Pipeline Verified Locally
       </div>
       <div class="status-badge badge-blue">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        57/57 Tests Passed
+        84/84 Tests Passed
       </div>
       <div class="status-badge badge-amber">
-        0.00% Drift
+        0.00% Drift (last run)
       </div>
 
       <div class="search-trigger" onclick="openSearch()">
@@ -975,6 +975,12 @@
         <span>Quick search</span>
         <kbd>&cmd;K</kbd>
       </div>
+
+      <!-- GOLD DASHBOARD LINK -->
+      <a href="dashboard.html" class="status-badge" style="background:linear-gradient(135deg,rgba(14,165,233,0.2),rgba(99,102,241,0.25));border:1px solid rgba(14,165,233,0.45);color:var(--text);font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px;" title="Open Live Gold Layer Analytics Dashboard">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        📊 Gold Dashboard
+      </a>
 
       <!-- THEME TOGGLE BUTTON -->
       <button class="theme-toggle-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle Light/Dark Theme">
@@ -1017,6 +1023,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
         Runbook &amp; ADRs
       </button>
+      <a href="dashboard.html" class="tab-btn" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;color:var(--accent);font-weight:600;" title="Open Gold Layer Marts BI Dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="15" height="15"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Gold Dashboard ↗
+      </a>
     </div>
 
     <div style="display:flex;align-items:center;gap:8px;">
@@ -1144,7 +1154,7 @@
         <div class="section-header">
           <div>
             <h2 class="section-title">Medallion Data Architecture Multi-Tier Pipeline</h2>
-            <p class="section-subtitle">Automated staging, transformation, SCD Type 2 dimension validity windows &amp; business marts</p>
+            <p class="section-subtitle">Automated staging, transformation, product price-version validity windows &amp; business marts</p>
           </div>
         </div>
 
@@ -1189,7 +1199,7 @@
             <ul class="card-bullets">
               <li><code>dim_customer</code>, <code>dim_date</code>, <code>dim_product</code></li>
               <li><code>fact_events</code> &amp; <code>fact_purchases</code></li>
-              <li>57+ dbt invariant tests passed</li>
+              <li>84 dbt tests passed (74 generic + 10 singular)</li>
             </ul>
           </div>
 
@@ -1263,7 +1273,7 @@
                 <td><code>date + category_l1</code></td>
                 <td>1 row per calendar day and top category</td>
                 <td><code>total_revenue, total_events, total_purchases, active_users</code></td>
-                <td>$0.00 Drift Verified</td>
+                <td>$0.00 Drift (reconciliation)</td>
               </tr>
               <tr>
                 <td class="code-cell">mart_customer_retention</td>
@@ -1468,9 +1478,9 @@
         <div class="section-header">
           <div>
             <h2 class="section-title">Spark &amp; Delta Lake Engine Optimization Benchmarks</h2>
-            <p class="section-subtitle">Quantified runtime gains across Join Strategies, Shuffle Partition Sizing &amp; File Compaction</p>
+            <p class="section-subtitle">Reference-profile values for Join Strategies, Shuffle Partition Sizing &amp; File Compaction (live measurement pending)</p>
           </div>
-          <div class="status-badge badge-blue">LIVE PROFILE VERIFIED</div>
+          <div class="status-badge badge-blue">REFERENCE PROFILE</div>
         </div>
 
         <div class="benchmark-grid">
@@ -1582,6 +1592,7 @@
             <p style="font-size:11px;color:var(--text-muted);margin-top:10px;">Evaluates date predicates early during query compilation.</p>
           </div>
         </div>
+        <p style="font-size:12px;color:var(--text-muted);margin-top:16px;">Values shown are the reference/fallback profile emitted by <code>spark_jobs/spark_benchmark.py</code>; a live benchmark run has not been recorded.</p>
       </div>
     </div>
 
@@ -1598,7 +1609,7 @@
         <div class="cmd-card">
           <div class="cmd-info">
             <div class="cmd-title">Full Platform Quality &amp; Governance Verification</div>
-            <div class="cmd-desc">Executes contract validation, breaking schema diff, dbt 57-test suite, revenue reconciliation, and Spark benchmarks.</div>
+            <div class="cmd-desc">Executes contract validation, breaking schema diff, dbt 84-test suite, revenue reconciliation, and Spark benchmarks.</div>
           </div>
           <button class="cmd-code" onclick="copyText('make verify-all')">
             <span>make verify-all</span>

@@ -20,15 +20,15 @@
 ## 🛠️ Step 0: Environment Setup & Infrastructure Initialization
 
 ### 1. Configure `.env`
-Ensure `.env` exists in the repository root (copy from `.env.exemple`):
+Ensure `.env` exists in the repository root (copy from `.env.example`):
 
 #### 🪟 Windows (PowerShell):
 ```powershell
-if (-not (Test-Path .env)) { Copy-Item .env.exemple .env }
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 #### 🐧 Linux / macOS (Bash):
 ```bash
-cp -n .env.exemple .env
+cp -n .env.example .env
 ```
 
 Your `.env` should look like:
@@ -81,7 +81,7 @@ python contracts/contract_cli.py diff \
   --old-contract contracts/schemas/ecommerce_events_v1.yml \
   --new-contract contracts/schemas/ecommerce_events_v2.yml
 ```
-> **Output:** Classifies schema additions (`device_type`, `currency`) as `[COMPATIBLE]`.
+> **Output:** Classifies the schema additions (`device_type`, `currency`) as `[WARNING]` (new optional columns without defaults - existing rows become NULL).
 
 #### 1B. Validate a Clean Dataset
 ```bash
@@ -97,7 +97,7 @@ python contracts/contract_cli.py validate \
   --input-file data/test_breaking.csv \
   --contract-file contracts/schemas/ecommerce_events_v1.yml
 ```
-> **Output:** Intercepts breaking changes and routes bad records to `data/quarantine/`.
+> **Output:** Reports `[CONTRACT VIOLATION]` (missing `user_id`, invalid `event_type`, negative `price`) and writes a violation JSON to `data/quarantine/`.
 
 ---
 
@@ -152,7 +152,7 @@ docker compose exec spark /opt/spark/bin/spark-submit `
 ```bash
 make run-silver
 ```
-> **Output:** Incremental MERGE completed into `s3a://silver/ecommerce_events/` and watermark state updated in `s3a://silver/ecommerce_events_watermarks/`.
+> **Output:** Incremental MERGE completed into `s3a://silver/ecommerce_events/` and watermark state updated in `s3a://silver/ecommerce_events/_watermarks`.
 
 ---
 
@@ -165,21 +165,26 @@ Run dbt models and test assertions against DuckDB:
 cd dbt
 dbt run --profiles-dir .
 
-# 5B. Run Full 83-Test Quality Suite
+# 5B. Run Full 84-Test Quality Suite
 dbt test --profiles-dir .
 cd ..
 ```
-> **Output:** `83 of 83 tests PASSED` (Sessionization bounds, cohort retention invariants, SCD2 ranges).
+> **Output:** `84 of 84 tests PASSED` (Sessionization bounds, cohort retention invariants, SCD2 ranges).
 > 
 > *Note on Infrastructure Requirements:*
-> - When running `dbt test` against local materialized DuckDB tables (`dev.duckdb`), 55 dimension and mart invariant tests run directly with zero latency.
+> - `make test-dbt-offline` runs the offline subset (58 of the 84 tests — it excludes the 26 tests tagged `s3_dependent`) directly against local DuckDB materializations with zero latency.
 > - When running staging tests (`stg_events`, `assert_fact_events_preserve_row_count`) that invoke `delta_scan('s3://...')`, ensure the MinIO container is running (`docker compose up -d minio`) or execute dbt within the containerized environment.
 
 ---
 
-### Step 6: Cross-Layer Reconciliation Suite (Zero-Drift Assertion)
+### Step 6: Cross-Layer Reconciliation Suite
 
-Run the multi-layer mathematical reconciliation check:
+Run the reconciliation checks. It compares three Gold-layer pairs:
+1. staging events vs `fact_events` (event row parity)
+2. `fact_purchases` vs `mart_daily_summary` (purchase revenue parity)
+3. staging purchases vs `fact_purchases` (purchase count parity)
+
+When a source is unavailable, the affected check is recorded as SKIP (not silently ignored) and the process can still exit 0.
 
 ```bash
 python checks/run_reconciliation.py
@@ -240,6 +245,20 @@ python scripts/replay_events.py --start-date 2019-10-01 --end-date 2019-10-05 --
    - **Lineage Graph:** Click on any job (e.g. `dbt_gold_marts` or `pyspark_silver_merge_transform`) to view the interactive visual trace from `s3a://raw` ➔ `s3a://bronze` ➔ `s3a://silver` ➔ `stg_events` ➔ `gold_marts`.
    - **Dataset & Job Facets:** View schema fields, data types, and run states.
 
+#### 📸 Live Marquez UI Screenshots
+
+**Datasets view** — all datasets registered in the `ecommerce_lakehouse` namespace:
+
+![Marquez Datasets](marquez_datasets.png)
+
+**Jobs view** — all 8 pipeline jobs with `COMPLETE` status:
+
+![Marquez Jobs](marquez_jobs.png)
+
+**Lineage graph** — full end-to-end trace from raw CSV → gold marts (click `cross_layer_reconciliation` for the richest view):
+
+![Marquez Lineage Graph](marquez_lineage_graph.png)
+
 ---
 
 ### Step 10: Apache Airflow Automated Orchestration
@@ -258,13 +277,13 @@ If you are recording a video demo or presenting to an interviewer, run everythin
 ```bash
 make run-demo
 ```
-*(Runs sample generation, ingestion, Bronze, Silver, dbt models, and 83 data tests in ~35 seconds).*
+*(Runs sample generation, ingestion, Bronze, Silver, dbt models, and 84 data tests in ~35 seconds).*
 
 ---
 
 ## 🧪 Crash-Safety & Failure-Injection Test (Interview Showcase)
 
-To demonstrate how the platform recovers from a crash without losing or duplicating data:
+To demonstrate the intended crash-recovery behavior (this is a manual procedure; no automated failure-injection test exists yet):
 
 ```bash
 # 1. Simulate a worker crash right after Silver MERGE (before watermark advances)
@@ -273,7 +292,7 @@ docker compose exec spark bash -c "SIMULATE_CRASH_AFTER_MERGE=true /opt/spark/bi
 
 # 2. Trigger automatic recovery retry
 make run-silver
-# -> Job re-reads prior watermark, applies SHA-256 deduplication, and succeeds with ZERO duplicate rows!
+# -> Job re-reads prior watermark and re-runs the MERGE; re-inserting an already-merged batch adds 0 rows (SHA-256 event_key match)
 
 # 3. Verify reconciliation still reports 0 drift
 python checks/run_reconciliation.py

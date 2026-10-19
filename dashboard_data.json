@@ -1,0 +1,450 @@
+{
+  "generated_at": "2026-10-19T14:57:33.762514Z",
+  "source": "C:\\Users\\kheza\\Desktop\\Data_Engineering\\E-Commerce-Lakehouse-Platform\\dbt\\dev.duckdb",
+  "kpis": {
+    "total_events": 99971,
+    "total_purchases": 1316,
+    "total_revenue": 377885.41,
+    "active_users": 15211
+  },
+  "mart_daily_summary": [
+    {
+      "date": "2019-10-01",
+      "category_l1": "accessories",
+      "total_events": 307,
+      "total_purchases": 5,
+      "total_revenue": 447.89,
+      "active_users": 100
+    },
+    {
+      "date": "2019-10-01",
+      "category_l1": "apparel",
+      "total_events": 1368,
+      "total_purchases": 8,
+      "total_revenue": 599.73,
+      "active_users": 384
+    },
+    {
+      "date": "2019-10-01",
+      "category_l1": "appliances",
+      "total_events": 6213,
+      "total_purchases": 73,
+      "total_revenue": 10733.24,
+      "active_users": 1293
+    },
+    {
+      "date": "2019-10-01",
+      "category_l1": "auto",
+      "total_events": 1435,
+      "total_purchases": 6,
+      "total_revenue": 615.25,
+      "active_users": 342
+    },
+    {
+      "date": "2019-10-01",
+      "category_l1": "computers",
+      "total_events": 2707,
+      "total_purchases": 27,
+      "total_revenue": 11498.82,
+      "active_users": 584
+    },
+    {
+      "date": "2019-10-01",
+      "category_l1": "construction",
+      "total_events": 1053,
+      "total_purchases": 5,
+      "total_revenue": 243.11999999999998,
+      "active_users": 260
+    },
+    {
+      "date": "2019-10-01",
+      "category_l1": "country_yard",
+      "total_events": 24,
+      "total_purchases": 0,
+      "total_revenue": 0.0,
+      "active_users": 14
+    },
+    {
+      "date": "2019-10-01",
+      "category_l1": "electronics",
+      "total_events": 18632,
+      "total_purchases": 432,
+      "total_revenue": 166406.77000000005,
+      "active_users": 4895
+    },
+    {
+      "date": "2019-10-01",
+      "category_l1": "furniture",
+      "total_events": 1408,
+      "total_purchases": 12,
+      "total_revenue": 2203.13,
+      "active_users": 411
+    },
+    {
+      "date": "2019-10-01",
+      "category_l1": "kids",
+      "total_events": 520,
+      "total_purchases": 6,
+      "total_revenue": 225.01,
+      "active_users": 171
+    },
+    {
+      "date": "2019-10-01",
+      "category_l1": "medicine",
+      "total_events": 11,
+      "total_purchases": 0,
+      "total_revenue": 0.0,
+      "active_users": 6
+    },
+    {
+      "date": "2019-10-01",
+      "category_l1": "sport",
+      "total_events": 191,
+      "total_purchases": 0,
+      "total_revenue": 0.0,
+      "active_users": 82
+    },
+    {
+      "date": "2019-10-01",
+      "category_l1": "stationery",
+      "total_events": 25,
+      "total_purchases": 1,
+      "total_revenue": 7.7,
+      "active_users": 4
+    },
+    {
+      "date": "2019-10-01",
+      "category_l1": "unknown",
+      "total_events": 16097,
+      "total_purchases": 173,
+      "total_revenue": 20846.520000000004,
+      "active_users": 4187
+    },
+    {
+      "date": "2019-11-01",
+      "category_l1": "accessories",
+      "total_events": 312,
+      "total_purchases": 3,
+      "total_revenue": 186.44,
+      "active_users": 76
+    },
+    {
+      "date": "2019-11-01",
+      "category_l1": "apparel",
+      "total_events": 2196,
+      "total_purchases": 9,
+      "total_revenue": 731.26,
+      "active_users": 559
+    },
+    {
+      "date": "2019-11-01",
+      "category_l1": "appliances",
+      "total_events": 5031,
+      "total_purchases": 44,
+      "total_revenue": 7118.739999999998,
+      "active_users": 1146
+    },
+    {
+      "date": "2019-11-01",
+      "category_l1": "auto",
+      "total_events": 818,
+      "total_purchases": 3,
+      "total_revenue": 336.66,
+      "active_users": 248
+    },
+    {
+      "date": "2019-11-01",
+      "category_l1": "computers",
+      "total_events": 2614,
+      "total_purchases": 22,
+      "total_revenue": 10020.109999999999,
+      "active_users": 603
+    },
+    {
+      "date": "2019-11-01",
+      "category_l1": "construction",
+      "total_events": 1032,
+      "total_purchases": 8,
+      "total_revenue": 1127.0,
+      "active_users": 257
+    },
+    {
+      "date": "2019-11-01",
+      "category_l1": "country_yard",
+      "total_events": 5,
+      "total_purchases": 0,
+      "total_revenue": 0.0,
+      "active_users": 3
+    },
+    {
+      "date": "2019-11-01",
+      "category_l1": "electronics",
+      "total_events": 17262,
+      "total_purchases": 326,
+      "total_revenue": 121229.38999999987,
+      "active_users": 4461
+    },
+    {
+      "date": "2019-11-01",
+      "category_l1": "furniture",
+      "total_events": 2830,
+      "total_purchases": 10,
+      "total_revenue": 2668.46,
+      "active_users": 758
+    },
+    {
+      "date": "2019-11-01",
+      "category_l1": "kids",
+      "total_events": 587,
+      "total_purchases": 2,
+      "total_revenue": 82.4,
+      "active_users": 179
+    },
+    {
+      "date": "2019-11-01",
+      "category_l1": "medicine",
+      "total_events": 7,
+      "total_purchases": 0,
+      "total_revenue": 0.0,
+      "active_users": 4
+    },
+    {
+      "date": "2019-11-01",
+      "category_l1": "sport",
+      "total_events": 256,
+      "total_purchases": 0,
+      "total_revenue": 0.0,
+      "active_users": 70
+    },
+    {
+      "date": "2019-11-01",
+      "category_l1": "stationery",
+      "total_events": 7,
+      "total_purchases": 0,
+      "total_revenue": 0.0,
+      "active_users": 2
+    },
+    {
+      "date": "2019-11-01",
+      "category_l1": "unknown",
+      "total_events": 17023,
+      "total_purchases": 141,
+      "total_revenue": 20557.77,
+      "active_users": 4254
+    }
+  ],
+  "mart_customer_retention": [
+    {
+      "cohort_month": "2019-10-01 00:00:00",
+      "months_since_first_purchase": 0,
+      "cohort_size": 616,
+      "retained_count": 616,
+      "retention_rate": 1.0
+    },
+    {
+      "cohort_month": "2019-10-01 00:00:00",
+      "months_since_first_purchase": 1,
+      "cohort_size": 616,
+      "retained_count": 2,
+      "retention_rate": 0.0032
+    },
+    {
+      "cohort_month": "2019-11-01 00:00:00",
+      "months_since_first_purchase": 0,
+      "cohort_size": 457,
+      "retained_count": 457,
+      "retention_rate": 1.0
+    }
+  ],
+  "mart_category_performance": [
+    {
+      "category_l1": "accessories",
+      "period": "2019-10-01 00:00:00",
+      "total_orders": 5,
+      "total_revenue": 447.89,
+      "prior_period_revenue": null,
+      "revenue_growth_rate": null,
+      "growth_rate_label": "new_category"
+    },
+    {
+      "category_l1": "apparel",
+      "period": "2019-10-01 00:00:00",
+      "total_orders": 8,
+      "total_revenue": 599.73,
+      "prior_period_revenue": null,
+      "revenue_growth_rate": null,
+      "growth_rate_label": "new_category"
+    },
+    {
+      "category_l1": "appliances",
+      "period": "2019-10-01 00:00:00",
+      "total_orders": 73,
+      "total_revenue": 10733.239999999994,
+      "prior_period_revenue": null,
+      "revenue_growth_rate": null,
+      "growth_rate_label": "new_category"
+    },
+    {
+      "category_l1": "auto",
+      "period": "2019-10-01 00:00:00",
+      "total_orders": 6,
+      "total_revenue": 615.25,
+      "prior_period_revenue": null,
+      "revenue_growth_rate": null,
+      "growth_rate_label": "new_category"
+    },
+    {
+      "category_l1": "computers",
+      "period": "2019-10-01 00:00:00",
+      "total_orders": 27,
+      "total_revenue": 11498.82,
+      "prior_period_revenue": null,
+      "revenue_growth_rate": null,
+      "growth_rate_label": "new_category"
+    },
+    {
+      "category_l1": "construction",
+      "period": "2019-10-01 00:00:00",
+      "total_orders": 5,
+      "total_revenue": 243.11999999999998,
+      "prior_period_revenue": null,
+      "revenue_growth_rate": null,
+      "growth_rate_label": "new_category"
+    },
+    {
+      "category_l1": "electronics",
+      "period": "2019-10-01 00:00:00",
+      "total_orders": 432,
+      "total_revenue": 166406.76999999973,
+      "prior_period_revenue": null,
+      "revenue_growth_rate": null,
+      "growth_rate_label": "new_category"
+    },
+    {
+      "category_l1": "furniture",
+      "period": "2019-10-01 00:00:00",
+      "total_orders": 12,
+      "total_revenue": 2203.13,
+      "prior_period_revenue": null,
+      "revenue_growth_rate": null,
+      "growth_rate_label": "new_category"
+    },
+    {
+      "category_l1": "kids",
+      "period": "2019-10-01 00:00:00",
+      "total_orders": 6,
+      "total_revenue": 225.01,
+      "prior_period_revenue": null,
+      "revenue_growth_rate": null,
+      "growth_rate_label": "new_category"
+    },
+    {
+      "category_l1": "stationery",
+      "period": "2019-10-01 00:00:00",
+      "total_orders": 1,
+      "total_revenue": 7.7,
+      "prior_period_revenue": null,
+      "revenue_growth_rate": null,
+      "growth_rate_label": "new_category"
+    },
+    {
+      "category_l1": "unknown",
+      "period": "2019-10-01 00:00:00",
+      "total_orders": 173,
+      "total_revenue": 20846.519999999993,
+      "prior_period_revenue": null,
+      "revenue_growth_rate": null,
+      "growth_rate_label": "new_category"
+    },
+    {
+      "category_l1": "accessories",
+      "period": "2019-11-01 00:00:00",
+      "total_orders": 3,
+      "total_revenue": 186.44,
+      "prior_period_revenue": 447.89,
+      "revenue_growth_rate": -0.5837,
+      "growth_rate_label": "comparable"
+    },
+    {
+      "category_l1": "apparel",
+      "period": "2019-11-01 00:00:00",
+      "total_orders": 9,
+      "total_revenue": 731.26,
+      "prior_period_revenue": 599.73,
+      "revenue_growth_rate": 0.2193,
+      "growth_rate_label": "comparable"
+    },
+    {
+      "category_l1": "appliances",
+      "period": "2019-11-01 00:00:00",
+      "total_orders": 44,
+      "total_revenue": 7118.739999999999,
+      "prior_period_revenue": 10733.239999999994,
+      "revenue_growth_rate": -0.3368,
+      "growth_rate_label": "comparable"
+    },
+    {
+      "category_l1": "auto",
+      "period": "2019-11-01 00:00:00",
+      "total_orders": 3,
+      "total_revenue": 336.66,
+      "prior_period_revenue": 615.25,
+      "revenue_growth_rate": -0.4528,
+      "growth_rate_label": "comparable"
+    },
+    {
+      "category_l1": "computers",
+      "period": "2019-11-01 00:00:00",
+      "total_orders": 22,
+      "total_revenue": 10020.11,
+      "prior_period_revenue": 11498.82,
+      "revenue_growth_rate": -0.1286,
+      "growth_rate_label": "comparable"
+    },
+    {
+      "category_l1": "construction",
+      "period": "2019-11-01 00:00:00",
+      "total_orders": 8,
+      "total_revenue": 1127.0,
+      "prior_period_revenue": 243.11999999999998,
+      "revenue_growth_rate": 3.6356,
+      "growth_rate_label": "comparable"
+    },
+    {
+      "category_l1": "electronics",
+      "period": "2019-11-01 00:00:00",
+      "total_orders": 326,
+      "total_revenue": 121229.39000000003,
+      "prior_period_revenue": 166406.76999999973,
+      "revenue_growth_rate": -0.2715,
+      "growth_rate_label": "comparable"
+    },
+    {
+      "category_l1": "furniture",
+      "period": "2019-11-01 00:00:00",
+      "total_orders": 10,
+      "total_revenue": 2668.46,
+      "prior_period_revenue": 2203.13,
+      "revenue_growth_rate": 0.2112,
+      "growth_rate_label": "comparable"
+    },
+    {
+      "category_l1": "kids",
+      "period": "2019-11-01 00:00:00",
+      "total_orders": 2,
+      "total_revenue": 82.4,
+      "prior_period_revenue": 225.01,
+      "revenue_growth_rate": -0.6338,
+      "growth_rate_label": "comparable"
+    },
+    {
+      "category_l1": "unknown",
+      "period": "2019-11-01 00:00:00",
+      "total_orders": 141,
+      "total_revenue": 20557.770000000004,
+      "prior_period_revenue": 20846.519999999993,
+      "revenue_growth_rate": -0.0139,
+      "growth_rate_label": "comparable"
+    }
+  ]
+}

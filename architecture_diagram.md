@@ -52,7 +52,7 @@
 │ ┌─────────────────────────────────────────────────────────────────────────┐ │
 │ │ Crash-Safety Proven │ │
 │ │ - MERGE + Watermark boundary tested │ │
-│ │ - Zero data loss on mid-job failure │ │
+│ │ - Post-commit watermark advancement │ │
 │ │ - Zero duplication on recovery │ │
 │ └─────────────────────────────────────────────────────────────────────────┘ │
 │ │

@@ -41,7 +41,7 @@ The Bronze layer is well-structured, production-ready code that follows medallio
 | brand: StringType (nullable) | ✅ StringType (nullable) | ✅ |
 | price: DoubleType | ✅ DoubleType | ✅ |
 | user_id: LongType | ✅ LongType | ✅ |
-| user_session: StringType (nullable) | ✅ StringType (nullable) | ✅ |
+| user_session: StringType (non-nullable) | ✅ StringType (non-nullable) | ✅ |
 
 **All lineage columns present:** ✅
 - ingested_at, source_file, pipeline_run_id, batch_id, event_date

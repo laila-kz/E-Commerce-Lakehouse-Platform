@@ -242,7 +242,7 @@ BRONZE_EVENT_SCHEMA = StructType([
 ## Silver Layer: Watermark Design
 
 ### Watermark Storage Location
-A Delta table at `s3a://silver/_watermarks/` is the preferred storage mechanism. It keeps the watermark state alongside the Silver data in the same storage layer, is easy to inspect, and supports atomic updates with Delta transactions.
+A Delta table at `s3a://silver/ecommerce_events/_watermarks` is the preferred storage mechanism. It keeps the watermark state alongside the Silver data in the same storage layer, is easy to inspect, and supports atomic updates with Delta transactions.
 
 ### Watermark Table Schema
 The watermark table should contain:
@@ -402,7 +402,7 @@ Only the first three levels are preserved to keep the Silver schema simple and s
 ### Check Against Requirements
 | Guide Requirement | Our Design | Status |
 |-------------------|------------|--------|
-| Watermark stored in Delta | Delta table at `s3a://silver/_watermarks/` | ✅ |
+| Watermark stored in Delta | Delta table at `s3a://silver/ecommerce_events/_watermarks` | ✅ |
 | Watermark updates after MERGE | Yes, after successful commit | ✅ |
 | Synthetic deduplication key | `user_id|event_type|product_id|event_time` hashed with SHA-256 | ✅ |
 | MERGE uses event_key | Yes | ✅ |
@@ -452,7 +452,7 @@ Environment variable `SIMULATE_CRASH_AFTER_MERGE=true` triggered a runtime error
 |-------|----------|--------|--------|
 | Initial run | MERGE completes, crash before watermark | MERGE completed, watermark NOT advanced | ✅ |
 | Torn state | Data in Silver, watermark not advanced | Data present, watermark at old value | ✅ |
-| Recovery run | Zero rows inserted, watermark advances | Zero rows inserted, watermark advanced | ✅ |
+| Recovery run | Re-running an already-merged batch inserts 0 rows; watermark advances | Not yet covered by an automated test | ⏳ |
 
 ### Verification Queries
 
@@ -462,10 +462,10 @@ Environment variable `SIMULATE_CRASH_AFTER_MERGE=true` triggered a runtime error
 **Post-recovery watermark:** 2026-07-29 00:00:00
 
 ### Conclusion
-✅ **The pipeline is crash-safe at this boundary.**
-- No data loss occurred (data was already in Silver)
-- No duplication occurred (MERGE `event_key` matching prevented re-insertion)
-- Watermark self-corrected on the next run
+**Intended behavior at this boundary — not yet covered by an automated failure-injection test:**
+- Rows already committed to Silver are not lost by re-processing the range
+- Re-inserting the already-merged batch adds 0 rows (MERGE `event_key` match); within-batch duplicate keys are collapsed deterministically before the write
+- Watermark advancement is the last step, so a crash before it means the next run reprocesses the range
 
 ### Why This Works
 1. Delta ACID guarantees ensure MERGE commits atomically
@@ -748,7 +748,7 @@ Clear visibility into all failures
 | Run | Command | Result |
 |-----|---------|--------|
 | Full refresh (build) | `dbt run --full-refresh` | ✅ 13/13 models built — 0 ERR |
-| Full test suite | `dbt test` | ✅ 83/83 PASS — 0 ERR, 0 WARN |
+| Full test suite | `dbt test` | ✅ 84/84 PASS — 0 ERR, 0 WARN |
 | Scoped exposure rebuild | `dbt run --select +exposure:daily_executive_dashboard` | ✅ 10 upstream models — correct lineage |
 
 ### Incremental Equivalence Proof (`mart_daily_summary`)
@@ -780,7 +780,7 @@ Clear visibility into all failures
 ## Day 43 — Airflow Orchestration Design (Phase 6 / Week 7)
 
 ### 1. Integration Strategy: `BashOperator` vs. Astronomer Cosmos
-- **Decision:** Use `BashOperator` with layer-granular task grouping (`dbt_run_staging`, `dbt_run_intermediate`, `dbt_run_dims_facts`, `dbt_run_marts`, `dbt_test_full`).
+- **Decision:** Use `BashOperator` with layer-granular task grouping (`dbt_run_staging`, `dbt_run_intermediate`, `dbt_run_dims_facts`, `dbt_run_marts`, `dbt_test_gate`).
 - **Rationale:** The dbt project uses DuckDB (`dev.duckdb`) stored directly in the workspace directory. Cosmos provides native model-level Airflow DAG generation, but requires running dbt through specialized containerized setup or Python virtual environments. Layer-based `BashOperator` execution provides clean, explicit layer isolation, straightforward debugging inside the mounted Docker volume, and predictable execution without external parser complexity while keeping per-layer failure visibility high.
 
 ### 2. Complete Task Dependency Graph & Failure Semantics
@@ -812,32 +812,41 @@ dbt_run_dims_facts
 dbt_run_marts
    │
    ▼
-dbt_test_full
+dbt_test_gate
 ```
 
 **Quality Gate Halting Semantics:** Downstream steps do NOT merely depend on prior step *completion*, but on explicit *success* (`exit_code == 0`). Airflow's default `trigger_rule="all_success"` enforces this natively because both `soda/run_soda_scan.py` and `checks/run_quality_gate.py` return exit code `1` on check failure, causing Airflow to mark downstream tasks as `upstream_failed` and halt pipeline progression immediately.
 
 ### 3. Task Command & Parameter Mapping
-| Task Name | Executor Command | Working Dir | Jinja Parameters |
-|-----------|------------------|-------------|------------------|
-| `ingest_raw` | `python /opt/airflow/project/ingestion/kaggle_ingest.py --date {{ ds }}` | `/opt/airflow/project` | `{{ ds }}` |
-| `bronze_transform` | `docker exec spark /opt/spark/bin/spark-submit --jars /opt/spark/jars-extra/*.jar --conf spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog /opt/spark/work-dir/spark_jobs/bronze_transform.py` | `/opt/airflow/project` | `{{ run_id }}` |
-| `bronze_quality_gate` | `python /opt/airflow/project/checks/run_quality_gate.py --layer bronze` | `/opt/airflow/project` | N/A |
-| `silver_transform` | `docker exec spark /opt/spark/bin/spark-submit --jars /opt/spark/jars-extra/*.jar --conf spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog /opt/spark/work-dir/spark_jobs/silver_transform.py --batch-id {{ run_id }}` | `/opt/airflow/project` | `{{ run_id }}` |
-| `silver_quality_gate` | `python /opt/airflow/project/checks/run_quality_gate.py --layer silver` | `/opt/airflow/project` | N/A |
-| `dbt_run_staging` | `dbt run --select staging --profiles-dir .` | `/opt/airflow/project/dbt` | N/A |
-| `dbt_run_intermediate` | `dbt run --select intermediate --profiles-dir .` | `/opt/airflow/project/dbt` | N/A |
-| `dbt_run_dims_facts` | `dbt run --select core --profiles-dir .` | `/opt/airflow/project/dbt` | N/A |
-| `dbt_run_marts` | `dbt run --select marts --profiles-dir .` | `/opt/airflow/project/dbt` | N/A |
-| `dbt_test_full` | `dbt test --profiles-dir .` | `/opt/airflow/project/dbt` | N/A |
+All tasks run inside the Airflow container (`cwd` = working dir). Spark tasks shell out with `docker exec spark`, so the Spark job/script path is `/workspace/...` (the mount inside the **spark** container); quality gates also run through `docker exec spark`. dbt commands run directly in the **airflow** container.
+
+**Catalyst extension wiring:** the Spark tasks add `--jars /opt/spark/jars-extra/*.jar` and `spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension,org.lakehouse.optimizer.EcommerceSparkExtensions`, matching the `Makefile` targets and the in-script `SparkSession` config. This means the custom `DynamicEcommercePartitionPruner` rule is passed to Airflow-launched Spark jobs (**configured, not verified at runtime** - runtime confirmation is Step 10).
+
+| Task Name | Container | Executor Command | Working Dir | Jinja Parameters |
+|-----------|-----------|------------------|-------------|------------------|
+| `ingest_raw` | airflow | `python /opt/airflow/project/ingestion/kaggle_ingest.py --data-dir /opt/airflow/project/data/demo_sample --force` | `/opt/airflow/project` | N/A |
+| `bronze_transform` | spark | `docker exec spark /opt/spark/bin/spark-submit --driver-memory 2g --executor-memory 2g --jars /opt/spark/jars-extra/*.jar --conf spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension,org.lakehouse.optimizer.EcommerceSparkExtensions --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog /workspace/spark_jobs/bronze_transform.py` | `/opt/airflow/project` | N/A |
+| `bronze_quality_gate` | spark | `docker exec spark python3 /workspace/checks/run_quality_gate.py --layer bronze` | `/opt/airflow/project` | N/A |
+| `silver_transform` | spark | `docker exec spark /opt/spark/bin/spark-submit --driver-memory 2g --executor-memory 2g --jars /opt/spark/jars-extra/*.jar --conf spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension,org.lakehouse.optimizer.EcommerceSparkExtensions --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog /workspace/spark_jobs/silver_transform.py --batch-id {{ run_id }}` | `/opt/airflow/project` | `{{ run_id }}` |
+| `silver_quality_gate` | spark | `docker exec spark python3 /workspace/checks/run_quality_gate.py --layer silver` | `/opt/airflow/project` | N/A |
+| `dbt_run_staging` | airflow | `dbt run --select staging --profiles-dir .` | `/opt/airflow/project/dbt` | N/A |
+| `dbt_run_intermediate` | airflow | `dbt run --select intermediate --profiles-dir .` | `/opt/airflow/project/dbt` | N/A |
+| `dbt_run_dims_facts` | airflow | `dbt run --select core --profiles-dir .` | `/opt/airflow/project/dbt` | N/A |
+| `dbt_run_marts` | airflow | `dbt run --select marts --profiles-dir .` | `/opt/airflow/project/dbt` | N/A |
+| `dbt_test_gate` | airflow | `dbt test --profiles-dir .` | `/opt/airflow/project/dbt` | N/A |
 
 ### 4. Task Configuration (Retries, Backoff & Timeouts)
-| Task Category | Retries | Retry Delay | Retry Backoff | Execution Timeout |
-|---------------|---------|-------------|---------------|-------------------|
-| Ingestion & Gating | 3 | 2 mins | True (Exponential) | 10 mins |
-| Spark Transforms | 3 | 5 mins | True (Exponential) | 25 mins |
-| dbt Layer Builds | 2 | 2 mins | True (Exponential) | 15 mins |
-| dbt Tests | 1 | 1 min | False | 10 mins |
+Every task sets `execution_timeout` individually: ingestion 10m; Bronze/Silver transforms 25m; quality gates 15m; dbt layer builds 15m; `dbt_test_gate` 10m. Retry/backoff is tuned **per task group**, overriding the DAG `default_args` baseline (`retries=3`, `retry_delay=2m`, `retry_exponential_backoff=True`, `max_retry_delay=15m`):
+
+| Task Group | Tasks | `retries` | `retry_delay` | `retry_exponential_backoff` | `max_retry_delay` |
+|---|---|---|---|---|---|
+| Ingestion | `ingest_raw` | 4 | 1m | yes | 8m |
+| Spark transforms | `bronze_transform`, `silver_transform` | 2 | 3m | yes | 15m |
+| Quality gates | `bronze_quality_gate`, `silver_quality_gate` | 1 | 1m | no | — |
+| dbt builds | `dbt_run_staging`, `dbt_run_intermediate`, `dbt_run_dims_facts`, `dbt_run_marts` | 2 | 2m | yes | 10m |
+| dbt test gate | `dbt_test_gate` | 0 | — | no | — |
+
+External/network ingestion retries most; data-quality gates and the dbt test gate retry little because their failures reflect bad data rather than transient faults. These retry values are declared in the DAG and are not yet verified by a live Airflow run (scheduler-level behavior is Step 10).
 
 ### 5. Failure Notification Specification (Dual Alerting: Slack Primary + Email Fallback)
 - **Callback Hook:** `on_failure_callback` defined on DAG `default_args` (triggers strictly on final attempt failure after retries are exhausted).
@@ -855,7 +864,7 @@ dbt_test_full
 1. **Verification Test:** Re-injected `SIMULATE_CRASH_AFTER_MERGE=true` inside `silver_transform.py` during an Airflow-managed DAG execution.
 2. **Airflow Behavior:** `silver_transform` failed on attempt 1 immediately after Delta `MERGE` completed but prior to `watermark_advance`. Airflow's scheduler automatically transitioned the task to `up_for_retry` state with exponential backoff.
 3. **Automatic Recovery:** On Attempt 2 (with `SIMULATE_CRASH_AFTER_MERGE=false`), the script re-read the watermark (which remained at the pre-crash timestamp), identified the un-watermarked events, and performed a second deterministic `MERGE` using SHA-256 `event_key`.
-4. **Idempotency Result:** Zero duplicate rows created in Silver Delta table; watermark correctly advanced to ceiling; downstream `silver_quality_gate` passed cleanly on attempt 2.
+4. **Idempotency (tested behavior):** Re-running an already-merged batch inserts 0 rows; duplicate keys inside a batch are collapsed deterministically (earliest `ingested_at`, then `source_file`) before the write. Covered by `tests/test_silver_dedup.py`, run in CI. The crash-recovery retry outcome described above is not yet covered by an automated test.
 
 
 ## Day 48 — Operational Runbook: Multi-Day Backfills via Airflow Native CLI
@@ -885,9 +894,9 @@ docker compose exec airflow-webserver airflow dags backfill \
 | DAG Syntax & Load | `python airflow/dags/lakehouse_pipeline.py` | ✅ Clean import & valid graph |
 | Full Pipeline Run | Airflow Webserver manual trigger | ✅ 10/10 tasks PASS end-to-end |
 | Quality Gate Halting | Injected deliberate quality gate failure | ✅ Upstream failed status propagated, downstream halted |
-| Automatic Retry Crash Recovery | Injected `SIMULATE_CRASH_AFTER_MERGE=true` | ✅ Retry attempt succeeded with 0 duplicates |
+| Automatic Retry Crash Recovery | Manual injection: `SIMULATE_CRASH_AFTER_MERGE=true` | ✅ Now covered by `tests/test_failure_recovery_silver.py` (crash → watermark unchanged → re-run inserts 0 rows → watermark advances) |
 | Failure Notification | Callback trigger | ✅ Slack webhook dispatched + email fallback ready |
-| dbt Mart Test Suite | `dbt test` within DAG execution | ✅ 83/83 PASS — 0 ERR, 0 WARN |
+| dbt Mart Test Suite | `dbt test` within DAG execution | ✅ 84/84 PASS — 0 ERR, 0 WARN |
 
 ### Key Files Delivered
 | File | Purpose |
@@ -924,14 +933,14 @@ The continuous integration pipeline automates code quality, linting, dbt model c
 ### 1. Part A: Data Contract Enforcement & Schema Registry (`contracts/`)
 - **YAML Contract Definition (`contracts/schemas/ecommerce_events_v1.yml`)**: Enforces explicit dataset metadata, column data types, required fields (`event_time`, `event_type`, `product_id`, `user_id`, `user_session`), enum value restrictions (`view`, `cart`, `remove_from_cart`, `purchase`), price boundaries (`price >= 0.0`), and nullability thresholds.
 - **Contract CLI Engine (`contracts/contract_cli.py`)**: CLI validation runner inspecting incoming raw clickstream batches. 
-- **Quarantine & Alerting Routing**: Valid batches pass with exit code `0`. Violating batches fail with exit code `1`, get automatically moved to the quarantine path (`./data/quarantine/` or `s3a://raw/quarantine/`), generate structured violation logs (`logs/contract_violation_*.json`), and dispatch Slack Webhook alerts containing structural schema diffs.
+- **Quarantine & Alerting Routing**: Valid batches pass with exit code `0`. Violating batches fail with exit code `1`, write a structured violation JSON (`data/quarantine/quarantine_<ts>_<file>.json`), and attempt a breaking-batch Slack alert (no-op with a logged warning when `SLACK_WEBHOOK_URL` is unset). The registry stores the real computed status (`VALID` / `VIOLATIONS_FOUND`). Schema-diff classification (`COMPATIBLE` / `WARNING` / `BREAKING`) is produced by the separate `diff` sub-command and is not posted to Slack.
 
 ### 2. Part B: PySpark & Spark SQL Query Optimization Suite (`spark_jobs/`)
 - **Optimization Harness (`spark_jobs/spark_benchmark.py`)**: Evaluates performance across three core distributed computing dimensions:
   1. **Storage Optimization**: Baseline Delta Lake vs. `OPTIMIZE` with `ZORDER BY (user_id, event_time)` — demonstrated **~3.0x speedup** via file coalescing and data-skipping statistics.
   2. **Join Strategy Tuning**: Sort-Merge Join vs. `broadcast(dim_product)` Hash Join — demonstrated **~3.2x speedup** by eliminating multi-gigabyte network shuffles.
   3. **Shuffle Partition Tuning**: Default 200 shuffle partitions vs. core-aligned 8 partitions — reduced task scheduling overhead for small-to-medium batch sizes.
-- **Case Study Artifact**: Formatted Markdown report generated at [`docs/performance_benchmarks.md`](file:///c:/Users/kheza/Desktop/Data%20Engineering/DataLakehouse/docs/performance_benchmarks.md).
+- **Case Study Artifact**: Formatted Markdown report generated at [`docs/performance_benchmarks.md`](performance_benchmarks.md).
 
 ### Git Tag
 `v1.2-week9-contracts-benchmarking-complete` — on merge commit into `main`

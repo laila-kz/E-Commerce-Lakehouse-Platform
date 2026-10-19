@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>E-Commerce Lakehouse | Gold Layer Analytics</title>
+  <meta name="description" content="Gold Layer analytics dashboard for the E-Commerce Lakehouse Platform — powered by Apache Spark, Delta Lake, dbt, and DuckDB." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-base:     #07090f;
+      --bg-card:     #0e1220;
+      --bg-card-2:   #121828;
+      --border:      rgba(255,255,255,0.07);
+      --border-glow: rgba(0,212,255,0.25);
+      --cyan:        #00d4ff;
+      --purple:      #7c3aed;
+      --purple-lt:   #a855f7;
+      --emerald:     #10b981;
+      --amber:       #f59e0b;
+      --rose:        #f43f5e;
+      --text-1:      #f1f5f9;
+      --text-2:      #94a3b8;
+      --text-3:      #475569;
+      --font:        'Inter', system-ui, sans-serif;
+      --mono:        'JetBrains Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      background: var(--bg-base);
+      color: var(--text-1);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── background grid ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(0,212,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.025) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    /* ── layout ── */
+    .page { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 0 24px 48px; }
+
+    /* ── header ── */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 28px 0 32px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 32px;
+    }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .brand-icon {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, var(--cyan), var(--purple));
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 0 24px rgba(0,212,255,0.35);
+    }
+    .brand-text h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+    .brand-text p  { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+    .header-meta { text-align: right; }
+    .header-meta .tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 11px; font-family: var(--mono);
+      background: rgba(16,185,129,0.1);
+      border: 1px solid rgba(16,185,129,0.3);
+      color: var(--emerald);
+      padding: 4px 10px; border-radius: 20px;
+    }
+    .header-meta .tag::before { content: '●'; font-size: 8px; animation: pulse 2s infinite; }
+    .header-meta .generated { font-size: 11px; color: var(--text-3); margin-top: 6px; font-family: var(--mono); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* ── section titles ── */
+    .section-title {
+      font-size: 11px; font-weight: 600; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--text-3);
+      margin-bottom: 16px;
+    }
+
+    /* ── kpi strip ── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px 24px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .kpi-card:hover { transform: translateY(-2px); border-color: var(--border-glow); }
+    .kpi-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    }
+    .kpi-card.cyan::before  { background: linear-gradient(90deg, var(--cyan), transparent); }
+    .kpi-card.purple::before { background: linear-gradient(90deg, var(--purple-lt), transparent); }
+    .kpi-card.emerald::before { background: linear-gradient(90deg, var(--emerald), transparent); }
+    .kpi-card.amber::before  { background: linear-gradient(90deg, var(--amber), transparent); }
+
+    .kpi-label { font-size: 12px; color: var(--text-2); font-weight: 500; margin-bottom: 10px; }
+    .kpi-value { font-size: 32px; font-weight: 800; letter-spacing: -1.5px; line-height: 1; }
+    .kpi-card.cyan   .kpi-value { color: var(--cyan); }
+    .kpi-card.purple .kpi-value { color: var(--purple-lt); }
+    .kpi-card.emerald .kpi-value { color: var(--emerald); }
+    .kpi-card.amber  .kpi-value { color: var(--amber); }
+
+    .kpi-sub { font-size: 11px; color: var(--text-3); margin-top: 8px; font-family: var(--mono); }
+    .kpi-glow {
+      position: absolute; bottom: -20px; right: -10px;
+      width: 80px; height: 80px; border-radius: 50%;
+      opacity: 0.08;
+    }
+    .kpi-card.cyan   .kpi-glow { background: var(--cyan); }
+    .kpi-card.purple .kpi-glow { background: var(--purple-lt); }
+    .kpi-card.emerald .kpi-glow { background: var(--emerald); }
+    .kpi-card.amber  .kpi-glow { background: var(--amber); }
+
+    /* ── chart grid ── */
+    .chart-row { display: grid; gap: 16px; margin-bottom: 16px; }
+    .chart-row-2 { grid-template-columns: 3fr 2fr; }
+    .chart-row-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .chart-row-1 { grid-template-columns: 1fr; }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      transition: border-color 0.2s;
+    }
+    .card:hover { border-color: rgba(255,255,255,0.12); }
+
+    .card-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .card-title { font-size: 14px; font-weight: 600; color: var(--text-1); }
+    .card-subtitle { font-size: 11px; color: var(--text-2); margin-top: 3px; }
+    .card-badge {
+      font-size: 10px; font-family: var(--mono);
+      padding: 3px 8px; border-radius: 6px;
+      background: rgba(124,58,237,0.15);
+      border: 1px solid rgba(124,58,237,0.3);
+      color: var(--purple-lt);
+      white-space: nowrap;
+    }
+
+    .chart-wrap { position: relative; }
+    .chart-wrap canvas { max-height: 260px; }
+
+    /* ── retention table ── */
+    .retention-table-wrap { overflow-x: auto; }
+    .retention-table {
+      width: 100%; border-collapse: collapse;
+      font-size: 11px; font-family: var(--mono);
+    }
+    .retention-table th {
+      text-align: center; padding: 6px 8px;
+      color: var(--text-3); font-weight: 500;
+      border-bottom: 1px solid var(--border);
+    }
+    .retention-table th:first-child { text-align: left; }
+    .retention-table td {
+      text-align: center; padding: 7px 8px;
+      border-radius: 4px; font-weight: 600;
+    }
+    .retention-table td:first-child { text-align: left; color: var(--text-2); font-weight: 400; }
+
+    /* ── category bars ── */
+    .cat-list { display: flex; flex-direction: column; gap: 12px; }
+    .cat-row { }
+    .cat-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+    .cat-name { font-size: 12px; color: var(--text-1); font-weight: 500; text-transform: capitalize; }
+    .cat-values { display: flex; gap: 12px; align-items: center; }
+    .cat-rev { font-size: 12px; font-family: var(--mono); color: var(--text-2); }
+    .cat-growth { font-size: 11px; font-family: var(--mono); font-weight: 600; }
+    .cat-growth.pos { color: var(--emerald); }
+    .cat-growth.neg { color: var(--rose); }
+    .cat-growth.na  { color: var(--text-3); }
+    .cat-bar-bg {
+      height: 6px; background: rgba(255,255,255,0.05);
+      border-radius: 99px; overflow: hidden;
+    }
+    .cat-bar-fill {
+      height: 100%; border-radius: 99px;
+      transition: width 1s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* ── footer ── */
+    footer {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 11px; color: var(--text-3);
+    }
+    footer a { color: var(--cyan); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+    .footer-stack { display: flex; gap: 8px; flex-wrap: wrap; }
+    .stack-badge {
+      padding: 3px 8px; border-radius: 6px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      font-family: var(--mono); font-size: 10px; color: var(--text-2);
+    }
+
+    /* ── loading ── */
+    #loading {
+      position: fixed; inset: 0; z-index: 999;
+      background: var(--bg-base);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 16px;
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid rgba(0,212,255,0.15);
+      border-top-color: var(--cyan);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading p { font-size: 13px; color: var(--text-2); font-family: var(--mono); }
+
+    /* ── responsive ── */
+    @media (max-width: 900px) {
+      .kpi-grid       { grid-template-columns: repeat(2,1fr); }
+      .chart-row-2    { grid-template-columns: 1fr; }
+      .chart-row-3    { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      .kpi-grid { grid-template-columns: 1fr 1fr; }
+      header { flex-direction: column; align-items: flex-start; gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <p>Loading Gold Layer data…</p>
+</div>
+
+<div class="page" id="app" style="display:none">
+
+  <!-- ── HEADER ── -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">⚡</div>
+      <div class="brand-text">
+        <h1>E-Commerce Lakehouse</h1>
+        <p>Gold Layer Analytics · dbt + DuckDB · Apache Spark + Delta Lake</p>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;">
+      <a href="index.html" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--cyan);background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.25);padding:6px 14px;border-radius:20px;text-decoration:none;transition:all .2s;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Lineage &amp; Governance
+      </a>
+      <div class="header-meta">
+        <div class="tag">LIVE DATA</div>
+        <div class="generated" id="generated-at"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── KPI STRIP ── -->
+  <div class="section-title">Platform KPIs</div>
+  <div class="kpi-grid">
+    <div class="kpi-card cyan">
+      <div class="kpi-label">Total Events</div>
+      <div class="kpi-value" id="kpi-events">—</div>
+      <div class="kpi-sub">mart_daily_summary</div>
+      <div class="kpi-glow"></div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-value" id="kpi-revenue">—</div>
+      <div class="kpi-sub">mart_daily_summary</div>
+      <div class="kpi-glow"></div>
+    </div>
+    <div class="kpi-card emerald">
+      <div class="kpi-label">Active Users</div>
+      <div class="kpi-value" id="kpi-users">—</div>
+      <div class="kpi-sub">mart_daily_summary</div>
+      <div class="kpi-glow"></div>
+    </div>
+    <div class="kpi-card amber">
+      <div class="kpi-label">Total Purchases</div>
+      <div class="kpi-value" id="kpi-purchases">—</div>
+      <div class="kpi-sub">mart_daily_summary</div>
+      <div class="kpi-glow"></div>
+    </div>
+  </div>
+
+  <!-- ── ROW 1: Revenue trend + Retention heatmap ── -->
+  <div class="chart-row chart-row-2" style="margin-bottom:16px">
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Daily Revenue &amp; Events</div>
+          <div class="card-subtitle">Aggregated across all categories · mart_daily_summary</div>
+        </div>
+        <div class="card-badge">mart_daily_summary</div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart-daily"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Cohort Retention Matrix</div>
+          <div class="card-subtitle">Month-0 = 100% by construction · mart_customer_retention</div>
+        </div>
+        <div class="card-badge">mart_customer_retention</div>
+      </div>
+      <div class="retention-table-wrap">
+        <table class="retention-table" id="retention-table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── ROW 2: Category performance + Mix donut ── -->
+  <div class="chart-row chart-row-2">
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Category Revenue Performance</div>
+          <div class="card-subtitle">Latest period · month-over-month growth · mart_category_performance</div>
+        </div>
+        <div class="card-badge">mart_category_performance</div>
+      </div>
+      <div class="cat-list" id="cat-bars"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Revenue Mix by Category</div>
+          <div class="card-subtitle">Latest period share of total revenue</div>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart-donut"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── FOOTER ── -->
+  <footer>
+    <div>
+      Built with
+      <a href="https://github.com/laila-kz/E-Commerce-Lakehouse-Platform" target="_blank" rel="noopener">
+        E-Commerce Lakehouse Platform
+      </a>
+      · <a href="index.html">Lineage Graph →</a>
+    </div>
+    <div class="footer-stack">
+      <span class="stack-badge">Apache Spark</span>
+      <span class="stack-badge">Delta Lake</span>
+      <span class="stack-badge">dbt</span>
+      <span class="stack-badge">DuckDB</span>
+      <span class="stack-badge">MinIO S3</span>
+      <span class="stack-badge">OpenLineage</span>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+// ── helpers ──────────────────────────────────────────────────────────────────
+const fmt = {
+  num:  v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(1)+'K' : String(v),
+  rev:  v => '$'+(v >= 1e6 ? (v/1e6).toFixed(2)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v.toFixed(0)),
+  pct:  v => v == null ? '—' : (v*100).toFixed(1)+'%',
+  date: s => { const d=new Date(s+'T00:00:00'); return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); },
+  mon:  s => { const d=new Date(s+'T00:00:00'); return d.toLocaleDateString('en-US',{month:'short',year:'2-digit'}); },
+};
+
+function retentionColor(rate) {
+  if (rate == null) return 'transparent';
+  const r = Math.round(rate * 100);
+  if (r >= 90) return 'rgba(0,212,255,0.75)';
+  if (r >= 70) return 'rgba(0,212,255,0.50)';
+  if (r >= 50) return 'rgba(124,58,237,0.55)';
+  if (r >= 30) return 'rgba(124,58,237,0.35)';
+  if (r >= 10) return 'rgba(124,58,237,0.20)';
+  return 'rgba(124,58,237,0.08)';
+}
+
+const CAT_COLORS = [
+  '#00d4ff','#7c3aed','#10b981','#f59e0b','#f43f5e',
+  '#06b6d4','#8b5cf6','#34d399','#fbbf24','#fb7185',
+];
+
+Chart.defaults.color = '#64748b';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+
+// ── main render ───────────────────────────────────────────────────────────────
+async function render() {
+  let data;
+  try {
+    const res = await fetch('dashboard_data.json?v=' + Date.now());
+    data = await res.json();
+  } catch(e) {
+    document.getElementById('loading').innerHTML =
+      '<p style="color:#f43f5e;font-family:monospace">Failed to load dashboard_data.json. Run: python scripts/export_dashboard_data.py</p>';
+    return;
+  }
+
+  // ── KPIs ──
+  const k = data.kpis;
+  document.getElementById('kpi-events').textContent    = fmt.num(k.total_events);
+  document.getElementById('kpi-revenue').textContent   = fmt.rev(k.total_revenue);
+  document.getElementById('kpi-users').textContent     = fmt.num(k.active_users);
+  document.getElementById('kpi-purchases').textContent = fmt.num(k.total_purchases);
+  document.getElementById('generated-at').textContent  =
+    'Generated ' + new Date(data.generated_at).toLocaleString();
+
+  // ── Daily chart ──
+  const daily = data.mart_daily_summary;
+  // Aggregate by date
+  const byDate = {};
+  for (const r of daily) {
+    if (!byDate[r.date]) byDate[r.date] = {revenue:0, events:0};
+    byDate[r.date].revenue += (r.total_revenue||0);
+    byDate[r.date].events  += (r.total_events||0);
+  }
+  const dates = Object.keys(byDate).sort();
+  const revenues = dates.map(d => byDate[d].revenue);
+  const events   = dates.map(d => byDate[d].events);
+
+  new Chart(document.getElementById('chart-daily'), {
+    type: 'line',
+    data: {
+      labels: dates.map(fmt.date),
+      datasets: [
+        {
+          label: 'Revenue ($)',
+          data: revenues,
+          borderColor: '#00d4ff',
+          backgroundColor: 'rgba(0,212,255,0.07)',
+          borderWidth: 2.5,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          fill: true,
+          tension: 0.4,
+          yAxisID: 'y',
+        },
+        {
+          label: 'Events',
+          data: events,
+          borderColor: '#7c3aed',
+          backgroundColor: 'rgba(124,58,237,0.08)',
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          fill: true,
+          tension: 0.4,
+          yAxisID: 'y1',
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: { labels: { boxWidth:12, font:{size:11} } },
+        tooltip: { callbacks: {
+          label: ctx => ctx.dataset.yAxisID === 'y'
+            ? ' ' + fmt.rev(ctx.parsed.y)
+            : ' ' + fmt.num(ctx.parsed.y) + ' events'
+        }}
+      },
+      scales: {
+        x: { grid:{color:'rgba(255,255,255,0.03)'}, ticks:{maxTicksLimit:8,font:{size:10}} },
+        y: {
+          position:'left',
+          grid:{color:'rgba(255,255,255,0.04)'},
+          ticks:{ callback: v => fmt.rev(v), font:{size:10}, maxTicksLimit:5 },
+        },
+        y1: {
+          position:'right',
+          grid:{display:false},
+          ticks:{ callback: v => fmt.num(v), font:{size:10}, maxTicksLimit:5 },
+        },
+      }
+    }
+  });
+
+  // ── Retention heatmap ──
+  const ret = data.mart_customer_retention;
+  const cohorts = [...new Set(ret.map(r=>r.cohort_month))].sort();
+  const maxMonth = Math.max(...ret.map(r=>r.months_since_first_purchase));
+
+  const thead = document.querySelector('#retention-table thead');
+  const tbody = document.querySelector('#retention-table tbody');
+
+  // header row
+  let hRow = '<tr><th>Cohort</th>';
+  for (let m=0; m<=maxMonth; m++) hRow += `<th>M+${m}</th>`;
+  thead.innerHTML = hRow + '</tr>';
+
+  // data rows
+  for (const cohort of cohorts) {
+    let row = `<tr><td>${fmt.mon(cohort)}</td>`;
+    for (let m=0; m<=maxMonth; m++) {
+      const cell = ret.find(r => r.cohort_month===cohort && r.months_since_first_purchase===m);
+      const rate = cell ? cell.retention_rate : null;
+      const bg   = retentionColor(rate);
+      const txt  = rate != null ? fmt.pct(rate) : '—';
+      const txtColor = (rate != null && rate >= 0.5) ? '#fff' : '#94a3b8';
+      row += `<td style="background:${bg};color:${txtColor}">${txt}</td>`;
+    }
+    tbody.innerHTML += row + '</tr>';
+  }
+
+  // ── Category bars ──
+  const cat = data.mart_category_performance;
+  // Get latest period
+  const periods = [...new Set(cat.map(r=>r.period))].sort();
+  const latestPeriod = periods[periods.length-1];
+  const latestCat = cat.filter(r => r.period === latestPeriod)
+    .sort((a,b) => b.total_revenue - a.total_revenue);
+  const maxRev = Math.max(...latestCat.map(r=>r.total_revenue));
+
+  const catEl = document.getElementById('cat-bars');
+  latestCat.forEach((r, i) => {
+    const growthVal = r.revenue_growth_rate;
+    const growthClass = growthVal == null ? 'na' : (growthVal >= 0 ? 'pos' : 'neg');
+    const growthTxt = growthVal == null
+      ? 'new'
+      : (growthVal >= 0 ? '▲ ' : '▼ ') + Math.abs(growthVal*100).toFixed(1)+'%';
+    const pct = ((r.total_revenue / maxRev)*100).toFixed(1);
+    const color = CAT_COLORS[i % CAT_COLORS.length];
+    catEl.innerHTML += `
+      <div class="cat-row">
+        <div class="cat-meta">
+          <span class="cat-name">${r.category_l1}</span>
+          <div class="cat-values">
+            <span class="cat-rev">${fmt.rev(r.total_revenue)}</span>
+            <span class="cat-growth ${growthClass}">MoM ${growthTxt}</span>
+          </div>
+        </div>
+        <div class="cat-bar-bg">
+          <div class="cat-bar-fill" style="width:${pct}%;background:${color}"></div>
+        </div>
+      </div>`;
+  });
+
+  // ── Donut chart ──
+  new Chart(document.getElementById('chart-donut'), {
+    type: 'doughnut',
+    data: {
+      labels: latestCat.map(r => r.category_l1),
+      datasets: [{
+        data: latestCat.map(r => r.total_revenue),
+        backgroundColor: CAT_COLORS.slice(0, latestCat.length),
+        borderColor: 'rgba(0,0,0,0.3)',
+        borderWidth: 2,
+        hoverOffset: 8,
+      }]
+    },
+    options: {
+      responsive: true,
+      cutout: '68%',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { boxWidth:10, padding:14, font:{size:11} }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${fmt.rev(ctx.parsed)} (${((ctx.parsed / ctx.dataset.data.reduce((a,b)=>a+b,0))*100).toFixed(1)}%)`
+          }
+        }
+      }
+    }
+  });
+
+  // Show app
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('app').style.display     = 'block';
+}
+
+render();
+</script>
+</body>
+</html>

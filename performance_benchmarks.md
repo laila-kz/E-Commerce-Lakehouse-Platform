@@ -5,9 +5,11 @@
 **Generated At:** 2026-09-16 15:00:13 UTC
 **Target Environment:** Spark on MinIO S3A Data Lakehouse
 
+> **Banner:** `EMPIRICAL_REFERENCE_PROFILE` means these figures are hardcoded fallback values in `spark_jobs/spark_benchmark.py` (fallback data at lines 292-310, emitted by the reference-profile branch at lines 285-313), **not** a live cluster run. Every number and gain in the tables below is a **reference value** only.
+
 ---
 
-## 📊 Benchmark Suite 1: Storage Optimization & File Compaction
+## 📊 Benchmark Suite 1: Storage Optimization & File Compaction (reference values)
 
 | Storage Strategy | Query Duration (ms) | Records | Performance Gain | Notes |
 |------------------|---------------------|---------|------------------|-------|
@@ -16,7 +18,7 @@
 
 ---
 
-## ⚡ Benchmark Suite 2: Join Strategy Benchmarks (`fact_events` ⋈ `dim_product`)
+## ⚡ Benchmark Suite 2: Join Strategy Benchmarks (`fact_events` ⋈ `dim_product`) (reference values)
 
 | Join Strategy | Execution Time (ms) | Network Shuffle Overhead | Performance Impact |
 |---------------|----------------------|--------------------------|--------------------|
@@ -25,7 +27,7 @@
 
 ---
 
-## ⚙️ Benchmark Suite 3: Shuffle Partition Tuning (`spark.sql.shuffle.partitions`)
+## ⚙️ Benchmark Suite 3: Shuffle Partition Tuning (`spark.sql.shuffle.partitions`) (reference values)
 
 | Partition Strategy | Execution Duration (ms) | Active Partitions | Task Overhead Impact |
 |--------------------|-------------------------|-------------------|----------------------|
