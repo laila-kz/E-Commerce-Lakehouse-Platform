@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generated_at": "2026-10-19T19:26:05.776745Z",
+    "generated_at": "2026-10-19T19:32:49.045991Z",
     "source": "dbt manifest.json + static infrastructure",
     "node_count": 110,
     "link_count": 129,

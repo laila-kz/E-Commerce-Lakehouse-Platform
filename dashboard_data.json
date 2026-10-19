@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-19T19:26:05.858113Z",
+  "generated_at": "2026-10-19T19:32:49.174761Z",
   "source": "/home/runner/work/E-Commerce-Lakehouse-Platform/E-Commerce-Lakehouse-Platform/dbt/dev.duckdb",
   "kpis": {
     "total_events": 149534,
