@@ -32,35 +32,35 @@ This project solves these challenges with a **reconciliation-first, crash-resili
 ```mermaid
 graph TD
     subgraph Ingestion & Storage ["1. Storage & Ingestion"]
-        A[Kaggle API / Source CSVs] -->|contract_cli.py| C{Contract Gate}
-        C -->|Valid| B[(MinIO: s3a://raw)]
-        C -->|Breaking Schema| Q[("data/quarantine/ (local)")]
-        B -->|schema enforcement| D[bronze_transform.py]
+        A["Kaggle API / Source CSVs"] -->|"contract_cli.py"| C{"Contract Gate"}
+        C -->|"Valid"| B[("MinIO: s3a://raw")]
+        C -->|"Breaking Schema"| Q[("data/quarantine/ (local)")]
+        B -->|"schema enforcement"| D["bronze_transform.py"]
     end
 
     subgraph Medallion Compute ["2. Medallion Processing (PySpark & Delta Lake)"]
-        D -->|Struct Schema Enforcement| E[(MinIO: s3a://bronze Delta)]
-        E -->|Soda Quality Gate| F{Bronze Gate}
-        F -->|Pass| G[silver_transform.py]
-        F -->|Fail| H[Halt & Slack Alert]
-        G -->|SHA-256 Dedup + MERGE| I[(MinIO: s3a://silver Delta)]
-        I -->|Soda Quality Gate| J{Silver Gate}
-        J -->|Pass| K[dbt_run_staging]
-        J -->|Fail| H
+        D -->|"Struct Schema Enforcement"| E[("MinIO: s3a://bronze Delta")]
+        E -->|"Soda Quality Gate"| F{"Bronze Gate"}
+        F -->|"Pass"| G["silver_transform.py"]
+        F -->|"Fail"| H["Halt & Slack Alert"]
+        G -->|"SHA-256 Dedup + MERGE"| I[("MinIO: s3a://silver Delta")]
+        I -->|"Soda Quality Gate"| J{"Silver Gate"}
+        J -->|"Pass"| K["dbt_run_staging"]
+        J -->|"Fail"| H
     end
 
     subgraph Analytics & Marts ["3. Dimensional Modeling (dbt + DuckDB)"]
-        K -->|Views| L[stg_events / stg_products]
-        L -->|30-min Idle Windowing| M[int_sessions / int_events_enriched]
-        M -->|SCD Type 2 (product) + Star Schema| N[dim_customer / dim_product / dim_date]
-        N --> O[fact_events / fact_purchases]
-        O -->|Incremental delete+insert| P[mart_daily_summary / mart_customer_retention / mart_category_performance]
-        P -->|84 dbt Tests Passing| R[dbt Exposures & BI Dashboards]
+        K -->|"Views"| L["stg_events / stg_products"]
+        L -->|"30-min Idle Windowing"| M["int_sessions / int_events_enriched"]
+        M -->|"SCD Type 2 (product) + Star Schema"| N["dim_customer / dim_product / dim_date"]
+        N --> O["fact_events / fact_purchases"]
+        O -->|"Incremental delete+insert"| P["mart_daily_summary / mart_customer_retention / mart_category_performance"]
+        P -->|"84 dbt Tests Passing"| R["dbt Exposures & BI Dashboards"]
     end
 
     subgraph Governance ["4. Enterprise Governance (OpenLineage + Marquez)"]
-        AF[Airflow DAG ecommerce_lakehouse] -.->|OpenLineage transport: job-run lineage| OL[Marquez Metadata Server]
-        EM[scripts/emit_marquez_lineage.py] -.->|dataset & schema facets| OL
+        AF["Airflow DAG ecommerce_lakehouse"] -.->|"OpenLineage transport: job-run lineage"| OL["Marquez Metadata Server"]
+        EM["scripts/emit_marquez_lineage.py"] -.->|"dataset & schema facets"| OL
     end
 ```
 
