@@ -247,6 +247,14 @@ The platform implements the **Linux Foundation OpenLineage Standard**:
 - **Dataset & schema facets:** Emitted by `scripts/emit_marquez_lineage.py` for the Spark and dbt datasets. A Spark listener and a dbt integration are not implemented, and the emitter's output has not been verified against a live Marquez.
 - **Marquez UI:** Available at [http://localhost:3001](http://localhost:3001) for visual lineage inspection, dataset facet tracking, and incident blast-radius analysis.
 
+#### Live Lineage Graph (Marquez UI)
+
+After running `python scripts/emit_marquez_lineage.py`, navigate to `http://localhost:3001`, switch namespace to `ecommerce_lakehouse`, and click any job to explore the interactive graph:
+
+![Marquez Lineage Graph](docs/marquez_lineage_graph.png)
+
+> Full end-to-end trace: `2019-Oct.csv` → Bronze → Silver → dbt Staging → Intermediate → Dims & Facts → Gold Marts → Reconciliation
+
 ---
 
 ## ⚖️ Architectural Decisions & Tradeoffs

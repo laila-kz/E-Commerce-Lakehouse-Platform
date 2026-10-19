@@ -245,6 +245,20 @@ python scripts/replay_events.py --start-date 2019-10-01 --end-date 2019-10-05 --
    - **Lineage Graph:** Click on any job (e.g. `dbt_gold_marts` or `pyspark_silver_merge_transform`) to view the interactive visual trace from `s3a://raw` ➔ `s3a://bronze` ➔ `s3a://silver` ➔ `stg_events` ➔ `gold_marts`.
    - **Dataset & Job Facets:** View schema fields, data types, and run states.
 
+#### 📸 Live Marquez UI Screenshots
+
+**Datasets view** — all datasets registered in the `ecommerce_lakehouse` namespace:
+
+![Marquez Datasets](marquez_datasets.png)
+
+**Jobs view** — all 8 pipeline jobs with `COMPLETE` status:
+
+![Marquez Jobs](marquez_jobs.png)
+
+**Lineage graph** — full end-to-end trace from raw CSV → gold marts (click `cross_layer_reconciliation` for the richest view):
+
+![Marquez Lineage Graph](marquez_lineage_graph.png)
+
 ---
 
 ### Step 10: Apache Airflow Automated Orchestration
